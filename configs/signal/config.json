@@ -1,0 +1,6 @@
+{
+  "logger": {
+    "level": "INFO"
+  },
+  "port": 1989
+}
