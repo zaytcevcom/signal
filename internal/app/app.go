@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/ossrs/go-oryx-lib/errors"
@@ -177,7 +178,6 @@ func handleJoin(
 	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
 	p := &internalrooms.Participant{
 		Room:        r.(*internalrooms.Room),
-		Display:     obj.Message.Display,
 		Out:         outMessages,
 		UserID:      obj.Message.UserID,
 		FirstName:   obj.Message.FirstName,
@@ -220,9 +220,19 @@ func handlePublish(
 	}
 
 	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
-	p := r.(*internalrooms.Room).Get(obj.Message.Display)
 
-	// Now, the peer is publishing.
+	// todo: Delete
+	userID := obj.Message.UserID
+	if userID == 0 {
+		id, _ := strconv.Atoi(obj.Message.Display)
+		userID = int64(id)
+	}
+	p, err := r.(*internalrooms.Room).Get(userID)
+	// p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "publish")
+	}
+
 	p.Publishing = true
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
@@ -243,11 +253,15 @@ func handleChangeState(
 	}
 
 	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
-	p := r.(*internalrooms.Room).ChangeState(obj.Message.Display, internalrooms.State{
-		IsMicroOn:   obj.Message.IsMicroOn,
-		IsCameraOn:  obj.Message.IsCameraOn,
-		BatteryLife: obj.Message.BatteryLife,
-	})
+
+	p := r.(*internalrooms.Room).ChangeState(
+		obj.Message.UserID,
+		internalrooms.State{
+			IsMicroOn:   obj.Message.IsMicroOn,
+			IsCameraOn:  obj.Message.IsCameraOn,
+			BatteryLife: obj.Message.BatteryLife,
+		},
+	)
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
 
@@ -267,7 +281,11 @@ func handleControl(
 	}
 
 	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
-	p := r.(*internalrooms.Room).Get(obj.Message.Display)
+
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "control")
+	}
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, obj.Message.Call, obj.Message.Data)
 
@@ -287,7 +305,11 @@ func handleDefault(
 	}
 
 	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
-	p := r.(*internalrooms.Room).Get(obj.Message.Display)
+
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "default")
+	}
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
 

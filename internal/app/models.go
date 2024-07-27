@@ -12,7 +12,6 @@ type Action struct {
 type EventJoin struct {
 	Message struct {
 		Room        string  `json:"room"`
-		Display     string  `json:"display"`
 		UserID      int64   `json:"userId"`
 		FirstName   string  `json:"firstName"`
 		LastName    string  `json:"lastName"`
@@ -27,7 +26,7 @@ type EventJoin struct {
 type EventLeave struct {
 	Message struct {
 		Room    string `json:"room"`
-		Display string `json:"display"`
+		Display string `json:"display"` // todo: Delete
 		UserID  int64  `json:"userId"`
 	} `json:"msg"`
 }
@@ -35,7 +34,6 @@ type EventLeave struct {
 type EventChangeState struct {
 	Message struct {
 		Room        string `json:"room"`
-		Display     string `json:"display"`
 		UserID      int64  `json:"userId"`
 		IsMicroOn   bool   `json:"isMicroOn"`
 		IsCameraOn  bool   `json:"isCameraOn"`
@@ -45,18 +43,17 @@ type EventChangeState struct {
 
 type EventControl struct {
 	Message struct {
-		Room    string `json:"room"`
-		Display string `json:"display"`
-		UserID  int64  `json:"userId"`
-		Call    string `json:"call"`
-		Data    string `json:"data"`
+		Room   string `json:"room"`
+		UserID int64  `json:"userId"`
+		Call   string `json:"call"`
+		Data   string `json:"data"`
 	} `json:"msg"`
 }
 
 type EventCustom struct {
 	Message struct {
-		Room    string `json:"room"`
-		Display string `json:"display"`
+		Room   string `json:"room"`
+		UserID int64  `json:"userId"`
 	} `json:"msg"`
 }
 

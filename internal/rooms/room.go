@@ -31,8 +31,8 @@ func (v *Room) Add(p *Participant) error {
 	defer v.Lock.Unlock()
 
 	for _, r := range v.Participants {
-		if r.Display == p.Display {
-			return errors.Errorf("Participant %v exists in room %v", p.Display, v.Name)
+		if r.UserID == p.UserID {
+			return errors.Errorf("Participant %v exists in room %v", p.UserID, v.Name)
 		}
 	}
 
@@ -40,25 +40,25 @@ func (v *Room) Add(p *Participant) error {
 	return nil
 }
 
-func (v *Room) Get(display string) *Participant {
+func (v *Room) Get(userID int64) (*Participant, error) {
 	v.Lock.RLock()
 	defer v.Lock.RUnlock()
 
 	for _, r := range v.Participants {
-		if r.Display == display {
-			return r
+		if r.UserID == userID {
+			return r, nil
 		}
 	}
 
-	return nil
+	return nil, errors.Errorf("Participant %v does not exist in room %v", userID, v.Name)
 }
 
-func (v *Room) ChangeState(display string, state State) *Participant {
+func (v *Room) ChangeState(userID int64, state State) *Participant {
 	v.Lock.Lock()
 	defer v.Lock.Unlock()
 
 	for i, r := range v.Participants {
-		if r.Display == display {
+		if r.UserID == userID {
 			v.Participants[i].IsMicroOn = state.IsMicroOn
 			v.Participants[i].IsCameraOn = state.IsCameraOn
 			v.Participants[i].BatteryLife = state.BatteryLife

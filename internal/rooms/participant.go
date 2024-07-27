@@ -9,7 +9,6 @@ import (
 
 type Participant struct {
 	Room        *Room       `json:"-"`
-	Display     string      `json:"display"`
 	Publishing  bool        `json:"publishing"`
 	Out         chan []byte `json:"-"`
 	UserID      int64       `json:"userId"`
@@ -23,7 +22,7 @@ type Participant struct {
 }
 
 func (p *Participant) String() string {
-	return fmt.Sprintf("display=%v, room=%v", p.Display, p.Room.Name)
+	return fmt.Sprintf("userID=%v, room=%v", p.UserID, p.Room.Name)
 }
 
 func (p *Participant) HandleContextDone(ctx context.Context) {
