@@ -1,4 +1,4 @@
-package room
+package rooms
 
 type Response struct {
 	Message Message `json:"msg"`

@@ -1,6 +1,11 @@
-package room
+package rooms
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+
+	"github.com/ossrs/go-oryx-lib/logger"
+)
 
 type Participant struct {
 	Room        *Room       `json:"-"`
@@ -17,6 +22,18 @@ type Participant struct {
 	BatteryLife int64       `json:"batteryLife"`
 }
 
-func (v *Participant) String() string {
-	return fmt.Sprintf("display=%v, room=%v", v.Display, v.Room.Name)
+func (p *Participant) String() string {
+	return fmt.Sprintf("display=%v, room=%v", p.Display, p.Room.Name)
+}
+
+func (p *Participant) HandleContextDone(ctx context.Context) {
+	<-ctx.Done()
+	if p == nil {
+		return
+	}
+
+	go p.Room.Notify(context.Background(), p, "leave", "", "")
+
+	p.Room.Remove(p)
+	logger.Tf(ctx, "Remove client %v", p)
 }

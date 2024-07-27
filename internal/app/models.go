@@ -1,6 +1,6 @@
 package app
 
-import "signal/internal/room"
+import "signal/internal/rooms"
 
 type Action struct {
 	TID     string `json:"tid"`
@@ -61,10 +61,10 @@ type EventCustom struct {
 }
 
 type Res struct {
-	Action       string              `json:"action"`
-	Room         string              `json:"room"`
-	Self         *room.Participant   `json:"self"`
-	Participants []*room.Participant `json:"participants"`
+	Action       string               `json:"action"`
+	Room         string               `json:"room"`
+	Self         *rooms.Participant   `json:"self"`
+	Participants []*rooms.Participant `json:"participants"`
 }
 
 type Tid struct {

@@ -1,0 +1,28 @@
+name: CI/CD Pipeline
+
+on: [push]
+
+jobs:
+
+  tests_by_makefile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ^1.22
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Lint
+        run: make lint
+        working-directory: .
+
+      - name: Unit tests
+        run: make test
+        working-directory: .
+
+      - name: Build
+        run: make build
+        working-directory: .

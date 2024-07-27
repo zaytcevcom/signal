@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"signal/internal/app"
-	"signal/internal/logger"
-	internalhttp "signal/internal/server/http"
 	"syscall"
 	"time"
+
+	internalapp "signal/internal/app"
+	internallogger "signal/internal/logger"
+	internalhttp "signal/internal/server/http"
 )
 
 var configFile string
@@ -32,9 +33,9 @@ func main() {
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
-	logg := logger.New(config.Logger.Level, nil)
+	logg := internallogger.New(config.Logger.Level, nil)
 
-	server := internalhttp.New(logg, app.New(logg), "", config.Port)
+	server := internalhttp.New(logg, internalapp.New(logg), "", config.Port)
 
 	go func() {
 		<-ctx.Done()
