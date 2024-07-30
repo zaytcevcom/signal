@@ -27,7 +27,6 @@ func NewHandler(logger Logger, app Application) http.Handler {
 	r.MethodNotAllowedHandler = http.HandlerFunc(methodNotAllowedHandler)
 	r.NotFoundHandler = http.HandlerFunc(methodNotFoundHandler)
 
-	r.Handle("/sig/v1/rtc", websocket.Handler(func(_ *websocket.Conn) {}))
 	return r
 }
 

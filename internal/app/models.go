@@ -25,9 +25,8 @@ type EventJoin struct {
 
 type EventLeave struct {
 	Message struct {
-		Room    string `json:"room"`
-		Display string `json:"display"` // todo: Delete
-		UserID  int64  `json:"userId"`
+		Room   string `json:"room"`
+		UserID int64  `json:"userId"`
 	} `json:"msg"`
 }
 

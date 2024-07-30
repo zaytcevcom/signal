@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/ossrs/go-oryx-lib/errors"
@@ -221,14 +220,7 @@ func handlePublish(
 
 	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
 
-	// todo: Delete
-	userID := obj.Message.UserID
-	if userID == 0 {
-		id, _ := strconv.Atoi(obj.Message.Display)
-		userID = int64(id)
-	}
-	p, err := r.(*internalrooms.Room).Get(userID)
-	// p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "publish")
 	}
