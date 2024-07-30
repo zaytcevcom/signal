@@ -11,9 +11,10 @@ import (
 )
 
 type Room struct {
-	Name         string         `json:"room"`
-	Participants []*Participant `json:"participants"`
-	Lock         sync.RWMutex   `json:"-"`
+	Name                string                `json:"room"`
+	Participants        []*Participant        `json:"participants"`
+	InvitedParticipants []*InvitedParticipant `json:"invitedParticipants"`
+	Lock                sync.RWMutex          `json:"-"`
 }
 
 type State struct {
@@ -30,6 +31,13 @@ func (v *Room) Add(p *Participant) error {
 	v.Lock.Lock()
 	defer v.Lock.Unlock()
 
+	for i, r := range v.InvitedParticipants {
+		if r.UserID == p.UserID {
+			v.InvitedParticipants = append(v.InvitedParticipants[:i], v.InvitedParticipants[i+1:]...)
+			break
+		}
+	}
+
 	for _, r := range v.Participants {
 		if r.UserID == p.UserID {
 			return errors.Errorf("Participant %v exists in room %v", p.UserID, v.Name)
@@ -37,6 +45,26 @@ func (v *Room) Add(p *Participant) error {
 	}
 
 	v.Participants = append(v.Participants, p)
+	return nil
+}
+
+func (v *Room) AddInvited(p *InvitedParticipant) error {
+	v.Lock.Lock()
+	defer v.Lock.Unlock()
+
+	for _, r := range v.Participants {
+		if r.UserID == p.UserID {
+			return nil
+		}
+	}
+
+	for _, r := range v.InvitedParticipants {
+		if r.UserID == p.UserID {
+			return nil
+		}
+	}
+
+	v.InvitedParticipants = append(v.InvitedParticipants, p)
 	return nil
 }
 
@@ -84,10 +112,12 @@ func (v *Room) Remove(p *Participant) {
 
 func (v *Room) Notify(ctx context.Context, peer *Participant, event, param, data string) {
 	var participants []*Participant
+	var invitedParticipants []*InvitedParticipant
 	func() {
 		v.Lock.RLock()
 		defer v.Lock.RUnlock()
 		participants = append(participants, v.Participants...)
+		invitedParticipants = append(invitedParticipants, v.InvitedParticipants...)
 	}()
 
 	for _, r := range participants {
@@ -97,14 +127,15 @@ func (v *Room) Notify(ctx context.Context, peer *Participant, event, param, data
 
 		res := Response{
 			Message{
-				Action:       "notify",
-				Event:        event,
-				Param:        param,
-				Data:         data,
-				Room:         v.Name,
-				Self:         r,
-				Peer:         peer,
-				Participants: participants,
+				Action:              "notify",
+				Event:               event,
+				Param:               param,
+				Data:                data,
+				Room:                v.Name,
+				Self:                r,
+				Peer:                peer,
+				Participants:        participants,
+				InvitedParticipants: invitedParticipants,
 			},
 		}
 

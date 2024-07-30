@@ -40,6 +40,7 @@ func init() {
 		"publish":     handlePublish,
 		"changeState": handleChangeState,
 		"control":     handleControl,
+		"inviteUsers": handleInviteUsers,
 		"default":     handleDefault,
 	}
 }
@@ -55,7 +56,7 @@ func (a *App) Health(_ context.Context) []byte {
 }
 
 func (a *App) Version(_ context.Context) []byte {
-	return []byte("1.0.0")
+	return []byte("1.0.1")
 }
 
 // RTC todo: можно ли тут знать о *websocket.Conn ?
@@ -280,6 +281,44 @@ func handleControl(
 	}
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, obj.Message.Call, obj.Message.Data)
+
+	return nil, nil
+}
+
+func handleInviteUsers(
+	ctx context.Context,
+	a *App,
+	m []byte,
+	action Action,
+	_ chan []byte,
+) (interface{}, error) {
+	obj := EventInviteUsers{}
+	if err := json.Unmarshal(m, &obj); err != nil {
+		return nil, errors.Wrapf(err, "Unmarshal %s", m)
+	}
+
+	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
+
+	for _, value := range obj.Message.Participants {
+		p := &internalrooms.InvitedParticipant{
+			Room:      r.(*internalrooms.Room),
+			UserID:    obj.Message.UserID,
+			FirstName: value.FirstName,
+			LastName:  value.LastName,
+			Status:    value.Status,
+			Photo:     nil,
+		}
+		if err := r.(*internalrooms.Room).AddInvited(p); err != nil {
+			return nil, errors.Wrapf(err, "inviteUsers")
+		}
+	}
+
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "inviteUsers")
+	}
+
+	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
 
 	return nil, nil
 }

@@ -40,6 +40,14 @@ type EventChangeState struct {
 	} `json:"msg"`
 }
 
+type EventInviteUsers struct {
+	Message struct {
+		Room         string                      `json:"room"`
+		UserID       int64                       `json:"userId"`
+		Participants []*rooms.InvitedParticipant `json:"participants"`
+	} `json:"msg"`
+}
+
 type EventControl struct {
 	Message struct {
 		Room   string `json:"room"`
