@@ -11,15 +11,16 @@ type Action struct {
 
 type EventJoin struct {
 	Message struct {
-		Room        string  `json:"room"`
-		UserID      int64   `json:"userId"`
-		FirstName   string  `json:"firstName"`
-		LastName    string  `json:"lastName"`
-		Status      *string `json:"status"`
-		Photo       *string `json:"photo"`
-		IsMicroOn   bool    `json:"isMicroOn"`
-		IsCameraOn  bool    `json:"isCameraOn"`
-		BatteryLife int64   `json:"batteryLife"`
+		Room         string  `json:"room"`
+		UserID       int64   `json:"userId"`
+		FirstName    string  `json:"firstName"`
+		LastName     string  `json:"lastName"`
+		Status       *string `json:"status"`
+		Photo        *string `json:"photo"`
+		IsHorizontal bool    `json:"isHorizontal"`
+		IsMicroOn    bool    `json:"isMicroOn"`
+		IsCameraOn   bool    `json:"isCameraOn"`
+		BatteryLife  int64   `json:"batteryLife"`
 	} `json:"msg"`
 }
 
@@ -65,10 +66,11 @@ type EventCustom struct {
 }
 
 type Res struct {
-	Action       string               `json:"action"`
-	Room         string               `json:"room"`
-	Self         *rooms.Participant   `json:"self"`
-	Participants []*rooms.Participant `json:"participants"`
+	Action              string                      `json:"action"`
+	Room                string                      `json:"room"`
+	Self                *rooms.Participant          `json:"self"`
+	Participants        []*rooms.Participant        `json:"participants"`
+	InvitedParticipants []*rooms.InvitedParticipant `json:"invitedParticipants"`
 }
 
 type Tid struct {

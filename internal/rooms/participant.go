@@ -17,17 +17,18 @@ type InvitedParticipant struct {
 }
 
 type Participant struct {
-	Room        *Room       `json:"-"`
-	Publishing  bool        `json:"publishing"`
-	Out         chan []byte `json:"-"`
-	UserID      int64       `json:"userId"`
-	FirstName   string      `json:"firstName"`
-	LastName    string      `json:"lastName"`
-	Status      *string     `json:"status"`
-	Photo       *string     `json:"photo"`
-	IsMicroOn   bool        `json:"isMicroOn"`
-	IsCameraOn  bool        `json:"isCameraOn"`
-	BatteryLife int64       `json:"batteryLife"`
+	Room         *Room       `json:"-"`
+	Publishing   bool        `json:"publishing"`
+	Out          chan []byte `json:"-"`
+	UserID       int64       `json:"userId"`
+	FirstName    string      `json:"firstName"`
+	LastName     string      `json:"lastName"`
+	Status       *string     `json:"status"`
+	Photo        *string     `json:"photo"`
+	IsHorizontal bool        `json:"isHorizontal"`
+	IsMicroOn    bool        `json:"isMicroOn"`
+	IsCameraOn   bool        `json:"isCameraOn"`
+	BatteryLife  int64       `json:"batteryLife"`
 }
 
 func (p *Participant) String() string {

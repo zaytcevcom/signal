@@ -177,16 +177,17 @@ func handleJoin(
 
 	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
 	p := &internalrooms.Participant{
-		Room:        r.(*internalrooms.Room),
-		Out:         outMessages,
-		UserID:      obj.Message.UserID,
-		FirstName:   obj.Message.FirstName,
-		LastName:    obj.Message.LastName,
-		Status:      obj.Message.Status,
-		Photo:       nil,
-		IsMicroOn:   obj.Message.IsMicroOn,
-		IsCameraOn:  obj.Message.IsCameraOn,
-		BatteryLife: obj.Message.BatteryLife,
+		Room:         r.(*internalrooms.Room),
+		Out:          outMessages,
+		UserID:       obj.Message.UserID,
+		FirstName:    obj.Message.FirstName,
+		LastName:     obj.Message.LastName,
+		Status:       obj.Message.Status,
+		Photo:        obj.Message.Photo,
+		IsHorizontal: obj.Message.IsHorizontal,
+		IsMicroOn:    obj.Message.IsMicroOn,
+		IsCameraOn:   obj.Message.IsCameraOn,
+		BatteryLife:  obj.Message.BatteryLife,
 	}
 	if err := r.(*internalrooms.Room).Add(p); err != nil {
 		return nil, errors.Wrapf(err, "join")
@@ -196,10 +197,11 @@ func handleJoin(
 	logger.Tf(ctx, "Join %v ok", p)
 
 	res := Res{
-		Action:       action.Message.Action,
-		Room:         obj.Message.Room,
-		Self:         p,
-		Participants: r.(*internalrooms.Room).Participants,
+		Action:              action.Message.Action,
+		Room:                obj.Message.Room,
+		Self:                p,
+		Participants:        r.(*internalrooms.Room).Participants,
+		InvitedParticipants: r.(*internalrooms.Room).InvitedParticipants,
 	}
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
@@ -302,16 +304,19 @@ func handleInviteUsers(
 	for _, value := range obj.Message.Participants {
 		p := &internalrooms.InvitedParticipant{
 			Room:      r.(*internalrooms.Room),
-			UserID:    obj.Message.UserID,
+			UserID:    value.UserID,
 			FirstName: value.FirstName,
 			LastName:  value.LastName,
 			Status:    value.Status,
-			Photo:     nil,
+			Photo:     value.Photo,
 		}
 		if err := r.(*internalrooms.Room).AddInvited(p); err != nil {
 			return nil, errors.Wrapf(err, "inviteUsers")
 		}
+		logger.Tf(ctx, "Invite %v ok", p)
 	}
+
+	logger.Tf(ctx, "COUNT INVITED %v ok", len(r.(*internalrooms.Room).InvitedParticipants))
 
 	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
 	if err != nil {
