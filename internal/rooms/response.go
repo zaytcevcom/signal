@@ -14,4 +14,5 @@ type Message struct {
 	Peer                *Participant          `json:"peer"`
 	Participants        []*Participant        `json:"participants"`
 	InvitedParticipants []*InvitedParticipant `json:"invitedParticipants"`
+	StartedAt           *int64                `json:"startedAt"`
 }

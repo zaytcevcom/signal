@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ossrs/go-oryx-lib/errors"
 	"github.com/ossrs/go-oryx-lib/logger"
@@ -14,12 +15,14 @@ type Room struct {
 	Name                string                `json:"room"`
 	Participants        []*Participant        `json:"participants"`
 	InvitedParticipants []*InvitedParticipant `json:"invitedParticipants"`
+	StartedAt           *int64                `json:"startedAt"`
 	Lock                sync.RWMutex          `json:"-"`
 }
 
 type State struct {
 	IsMicroOn   bool  `json:"isMicroOn"`
 	IsCameraOn  bool  `json:"isCameraOn"`
+	IsSpeakerOn bool  `json:"isSpeakerOn"`
 	BatteryLife int64 `json:"batteryLife"`
 }
 
@@ -41,10 +44,23 @@ func (v *Room) Add(p *Participant) error {
 	for _, r := range v.Participants {
 		if r.UserID == p.UserID {
 			return errors.Errorf("Participant %v exists in room %v", p.UserID, v.Name)
+
+			// v.Participants[i] = p
+			// logger.Wf(context.Background(), "Participant %v exists in room %v", p.UserID, v.Name)
+			// return nil
+
+			// v.Participants = append(v.Participants[:i], v.Participants[i+1:]...)
+			// break
 		}
 	}
 
 	v.Participants = append(v.Participants, p)
+
+	if len(v.Participants) == 2 {
+		unixTime := time.Now().Unix()
+		v.StartedAt = &unixTime
+	}
+
 	return nil
 }
 
@@ -89,6 +105,7 @@ func (v *Room) ChangeState(userID int64, state State) *Participant {
 		if r.UserID == userID {
 			v.Participants[i].IsMicroOn = state.IsMicroOn
 			v.Participants[i].IsCameraOn = state.IsCameraOn
+			v.Participants[i].IsSpeakerOn = state.IsSpeakerOn
 			v.Participants[i].BatteryLife = state.BatteryLife
 
 			return r
@@ -136,6 +153,7 @@ func (v *Room) Notify(ctx context.Context, peer *Participant, event, param, data
 				Peer:                peer,
 				Participants:        participants,
 				InvitedParticipants: invitedParticipants,
+				StartedAt:           v.StartedAt,
 			},
 		}
 

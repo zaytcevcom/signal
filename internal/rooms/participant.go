@@ -28,6 +28,7 @@ type Participant struct {
 	IsHorizontal bool        `json:"isHorizontal"`
 	IsMicroOn    bool        `json:"isMicroOn"`
 	IsCameraOn   bool        `json:"isCameraOn"`
+	IsSpeakerOn  bool        `json:"isSpeakerOn"`
 	BatteryLife  int64       `json:"batteryLife"`
 }
 
@@ -38,6 +39,7 @@ func (p *Participant) String() string {
 func (p *Participant) HandleContextDone(ctx context.Context) {
 	<-ctx.Done()
 	if p == nil {
+		logger.Tf(ctx, "Empty Participant")
 		return
 	}
 

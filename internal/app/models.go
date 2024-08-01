@@ -20,6 +20,7 @@ type EventJoin struct {
 		IsHorizontal bool    `json:"isHorizontal"`
 		IsMicroOn    bool    `json:"isMicroOn"`
 		IsCameraOn   bool    `json:"isCameraOn"`
+		IsSpeakerOn  bool    `json:"isSpeakerOn"`
 		BatteryLife  int64   `json:"batteryLife"`
 	} `json:"msg"`
 }
@@ -37,6 +38,7 @@ type EventChangeState struct {
 		UserID      int64  `json:"userId"`
 		IsMicroOn   bool   `json:"isMicroOn"`
 		IsCameraOn  bool   `json:"isCameraOn"`
+		IsSpeakerOn bool   `json:"isSpeakerOn"`
 		BatteryLife int64  `json:"batteryLife"`
 	} `json:"msg"`
 }
@@ -65,12 +67,13 @@ type EventCustom struct {
 	} `json:"msg"`
 }
 
-type Res struct {
+type ResponseJoin struct {
 	Action              string                      `json:"action"`
 	Room                string                      `json:"room"`
 	Self                *rooms.Participant          `json:"self"`
 	Participants        []*rooms.Participant        `json:"participants"`
 	InvitedParticipants []*rooms.InvitedParticipant `json:"invitedParticipants"`
+	StartedAt           *int64                      `json:"startedAt"`
 }
 
 type Tid struct {

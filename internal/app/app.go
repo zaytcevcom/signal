@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"sync"
 
 	"github.com/ossrs/go-oryx-lib/errors"
@@ -64,19 +63,19 @@ func (a *App) RTC(ctx context.Context, c *websocket.Conn) {
 	ctx, cancel := context.WithCancel(logger.WithContext(ctx))
 	defer a.closeConnection(ctx, cancel, c)
 
-	r := c.Request()
+	// todo: проблема с удалением пользователя из комнаты при потери сети
 
-	logger.Tf(ctx, "Serve client %v at %v", r.RemoteAddr, r.RequestURI)
+	logger.Tf(ctx, "Serve client %v at %v", c.Request().RemoteAddr, c.Request().RequestURI)
 
 	inMessages := make(chan []byte)
-	go a.handleInMessages(ctx, cancel, c, r, inMessages)
+	go a.handleInMessages(ctx, cancel, c, inMessages)
 
 	outMessages := make(chan []byte)
 	go a.handleOutMessages(ctx, cancel, inMessages, outMessages)
 
 	for m := range outMessages {
 		if _, err := c.Write(m); err != nil {
-			logger.Wf(ctx, "Ignore err %v for %v", err, r.RemoteAddr)
+			logger.Wf(ctx, "[RTC] Ignore err %v for %v", err, c.Request().RemoteAddr)
 			break
 		}
 	}
@@ -95,7 +94,6 @@ func (a *App) handleInMessages(
 	ctx context.Context,
 	cancel context.CancelFunc,
 	c *websocket.Conn,
-	r *http.Request,
 	inMessages chan []byte,
 ) {
 	defer cancel()
@@ -104,12 +102,14 @@ func (a *App) handleInMessages(
 	for {
 		n, err := c.Read(buf)
 		if err != nil {
-			logger.Wf(ctx, "Ignore err %v for %v", err, r.RemoteAddr)
+			logger.Wf(ctx, "[InMessages] Ignore err %v", err)
+			_ = c.Close() // todo: нужно или закроется позже?
 			break
 		}
 
 		select {
 		case <-ctx.Done():
+			return // todo: нужно?
 		case inMessages <- buf[:n]:
 		}
 	}
@@ -129,19 +129,19 @@ func (a *App) handleOutMessages(
 			return errors.Wrapf(err, "Unmarshal %s", m)
 		}
 
-		var res interface{}
+		var response interface{}
 		actionType := action.Message.Action
 		handler, ok := handlers[actionType]
 		if !ok {
 			handler = handlers["default"]
 		}
 
-		res, err := handler(ctx, a, m, action, outMessages)
+		response, err := handler(ctx, a, m, action, outMessages)
 		if err != nil {
 			return err
 		}
 
-		b, err := json.Marshal(Tid{action.TID, res})
+		b, err := json.Marshal(Tid{action.TID, response})
 		if err != nil {
 			return errors.Wrapf(err, "marshal")
 		}
@@ -187,6 +187,7 @@ func handleJoin(
 		IsHorizontal: obj.Message.IsHorizontal,
 		IsMicroOn:    obj.Message.IsMicroOn,
 		IsCameraOn:   obj.Message.IsCameraOn,
+		IsSpeakerOn:  obj.Message.IsSpeakerOn,
 		BatteryLife:  obj.Message.BatteryLife,
 	}
 	if err := r.(*internalrooms.Room).Add(p); err != nil {
@@ -196,17 +197,18 @@ func handleJoin(
 	go p.HandleContextDone(ctx)
 	logger.Tf(ctx, "Join %v ok", p)
 
-	res := Res{
+	response := ResponseJoin{
 		Action:              action.Message.Action,
 		Room:                obj.Message.Room,
 		Self:                p,
 		Participants:        r.(*internalrooms.Room).Participants,
 		InvitedParticipants: r.(*internalrooms.Room).InvitedParticipants,
+		StartedAt:           r.(*internalrooms.Room).StartedAt,
 	}
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
 
-	return res, nil
+	return response, nil
 }
 
 func handlePublish(
@@ -254,6 +256,7 @@ func handleChangeState(
 		internalrooms.State{
 			IsMicroOn:   obj.Message.IsMicroOn,
 			IsCameraOn:  obj.Message.IsCameraOn,
+			IsSpeakerOn: obj.Message.IsSpeakerOn,
 			BatteryLife: obj.Message.BatteryLife,
 		},
 	)
@@ -313,10 +316,7 @@ func handleInviteUsers(
 		if err := r.(*internalrooms.Room).AddInvited(p); err != nil {
 			return nil, errors.Wrapf(err, "inviteUsers")
 		}
-		logger.Tf(ctx, "Invite %v ok", p)
 	}
-
-	logger.Tf(ctx, "COUNT INVITED %v ok", len(r.(*internalrooms.Room).InvitedParticipants))
 
 	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
 	if err != nil {
