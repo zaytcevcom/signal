@@ -29,6 +29,7 @@ type Participant struct {
 	IsMicroOn    bool        `json:"isMicroOn"`
 	IsCameraOn   bool        `json:"isCameraOn"`
 	IsSpeakerOn  bool        `json:"isSpeakerOn"`
+	CameraType   *string     `json:"cameraType"`
 	BatteryLife  int64       `json:"batteryLife"`
 }
 

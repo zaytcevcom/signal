@@ -21,6 +21,7 @@ type EventJoin struct {
 		IsMicroOn    bool    `json:"isMicroOn"`
 		IsCameraOn   bool    `json:"isCameraOn"`
 		IsSpeakerOn  bool    `json:"isSpeakerOn"`
+		CameraType   *string `json:"cameraType"`
 		BatteryLife  int64   `json:"batteryLife"`
 	} `json:"msg"`
 }
@@ -34,12 +35,13 @@ type EventLeave struct {
 
 type EventChangeState struct {
 	Message struct {
-		Room        string `json:"room"`
-		UserID      int64  `json:"userId"`
-		IsMicroOn   bool   `json:"isMicroOn"`
-		IsCameraOn  bool   `json:"isCameraOn"`
-		IsSpeakerOn bool   `json:"isSpeakerOn"`
-		BatteryLife int64  `json:"batteryLife"`
+		Room        string  `json:"room"`
+		UserID      int64   `json:"userId"`
+		IsMicroOn   bool    `json:"isMicroOn"`
+		IsCameraOn  bool    `json:"isCameraOn"`
+		IsSpeakerOn bool    `json:"isSpeakerOn"`
+		CameraType  *string `json:"cameraType"`
+		BatteryLife int64   `json:"batteryLife"`
 	} `json:"msg"`
 }
 

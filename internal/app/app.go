@@ -188,6 +188,7 @@ func handleJoin(
 		IsMicroOn:    obj.Message.IsMicroOn,
 		IsCameraOn:   obj.Message.IsCameraOn,
 		IsSpeakerOn:  obj.Message.IsSpeakerOn,
+		CameraType:   obj.Message.CameraType,
 		BatteryLife:  obj.Message.BatteryLife,
 	}
 	if err := r.(*internalrooms.Room).Add(p); err != nil {
@@ -257,6 +258,7 @@ func handleChangeState(
 			IsMicroOn:   obj.Message.IsMicroOn,
 			IsCameraOn:  obj.Message.IsCameraOn,
 			IsSpeakerOn: obj.Message.IsSpeakerOn,
+			CameraType:  obj.Message.CameraType,
 			BatteryLife: obj.Message.BatteryLife,
 		},
 	)

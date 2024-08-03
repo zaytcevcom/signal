@@ -20,10 +20,11 @@ type Room struct {
 }
 
 type State struct {
-	IsMicroOn   bool  `json:"isMicroOn"`
-	IsCameraOn  bool  `json:"isCameraOn"`
-	IsSpeakerOn bool  `json:"isSpeakerOn"`
-	BatteryLife int64 `json:"batteryLife"`
+	IsMicroOn   bool    `json:"isMicroOn"`
+	IsCameraOn  bool    `json:"isCameraOn"`
+	IsSpeakerOn bool    `json:"isSpeakerOn"`
+	CameraType  *string `json:"cameraType"`
+	BatteryLife int64   `json:"batteryLife"`
 }
 
 func (v *Room) String() string {
@@ -106,6 +107,7 @@ func (v *Room) ChangeState(userID int64, state State) *Participant {
 			v.Participants[i].IsMicroOn = state.IsMicroOn
 			v.Participants[i].IsCameraOn = state.IsCameraOn
 			v.Participants[i].IsSpeakerOn = state.IsSpeakerOn
+			v.Participants[i].CameraType = state.CameraType
 			v.Participants[i].BatteryLife = state.BatteryLife
 
 			return r
@@ -122,8 +124,12 @@ func (v *Room) Remove(p *Participant) {
 	for i, r := range v.Participants {
 		if p == r {
 			v.Participants = append(v.Participants[:i], v.Participants[i+1:]...)
-			return
+			break
 		}
+	}
+
+	if len(v.Participants) == 0 {
+		v.StartedAt = nil
 	}
 }
 
