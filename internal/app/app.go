@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/gorilla/websocket"
 	"github.com/ossrs/go-oryx-lib/errors"
 	"github.com/ossrs/go-oryx-lib/logger"
-	"golang.org/x/net/websocket"
 	internalrooms "signal/internal/rooms"
 )
 
@@ -59,30 +59,28 @@ func (a *App) Version(_ context.Context) []byte {
 }
 
 // RTC todo: можно ли тут знать о *websocket.Conn ?
-func (a *App) RTC(ctx context.Context, c *websocket.Conn) {
+func (a *App) RTC(ctx context.Context, conn *websocket.Conn) {
 	ctx, cancel := context.WithCancel(logger.WithContext(ctx))
-	defer a.closeConnection(ctx, cancel, c)
+	defer a.closeConnection(ctx, cancel, conn)
 
 	// todo: проблема с удалением пользователя из комнаты при потери сети
 
-	logger.Tf(ctx, "Serve client %v at %v", c.Request().RemoteAddr, c.Request().RequestURI)
-
 	inMessages := make(chan []byte)
-	go a.handleInMessages(ctx, cancel, c, inMessages)
+	go a.handleInMessages(ctx, cancel, conn, inMessages)
 
 	outMessages := make(chan []byte)
 	go a.handleOutMessages(ctx, cancel, inMessages, outMessages)
 
 	for m := range outMessages {
-		if _, err := c.Write(m); err != nil {
-			logger.Wf(ctx, "[RTC] Ignore err %v for %v", err, c.Request().RemoteAddr)
+		if err := conn.WriteMessage(websocket.TextMessage, m); err != nil {
+			logger.Wf(ctx, "[RTC] Ignore err %v for %v", err, conn.RemoteAddr())
 			break
 		}
 	}
 }
 
-func (a *App) closeConnection(ctx context.Context, cancel context.CancelFunc, c *websocket.Conn) {
-	err := c.Close()
+func (a *App) closeConnection(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn) {
+	err := conn.Close()
 	if err != nil {
 		logger.E(ctx, err.Error())
 	}
@@ -93,24 +91,23 @@ func (a *App) closeConnection(ctx context.Context, cancel context.CancelFunc, c 
 func (a *App) handleInMessages(
 	ctx context.Context,
 	cancel context.CancelFunc,
-	c *websocket.Conn,
+	conn *websocket.Conn,
 	inMessages chan []byte,
 ) {
 	defer cancel()
 
-	buf := make([]byte, 16384)
 	for {
-		n, err := c.Read(buf)
+		_, message, err := conn.ReadMessage()
 		if err != nil {
 			logger.Wf(ctx, "[InMessages] Ignore err %v", err)
-			_ = c.Close() // todo: нужно или закроется позже?
+			_ = conn.Close() // todo: нужно или закроется позже?
 			break
 		}
 
 		select {
 		case <-ctx.Done():
 			return // todo: нужно?
-		case inMessages <- buf[:n]:
+		case inMessages <- message:
 		}
 	}
 }

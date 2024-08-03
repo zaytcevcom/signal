@@ -3,8 +3,6 @@ package rooms
 import (
 	"context"
 	"fmt"
-
-	"github.com/ossrs/go-oryx-lib/logger"
 )
 
 type InvitedParticipant struct {
@@ -40,12 +38,9 @@ func (p *Participant) String() string {
 func (p *Participant) HandleContextDone(ctx context.Context) {
 	<-ctx.Done()
 	if p == nil {
-		logger.Tf(ctx, "Empty Participant")
 		return
 	}
 
-	go p.Room.Notify(context.Background(), p, "leave", "", "")
-
 	p.Room.Remove(p)
-	logger.Tf(ctx, "Remove client %v", p)
+	p.Room.Notify(context.Background(), p, "leave", "", "")
 }

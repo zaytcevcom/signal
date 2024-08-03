@@ -4,10 +4,10 @@ go 1.22.5
 
 require (
 	github.com/gorilla/mux v1.8.1
+	github.com/gorilla/websocket v1.5.3
 	github.com/ossrs/go-oryx-lib v0.0.10
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/net v0.27.0
 )
 
 require (

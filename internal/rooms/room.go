@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/ossrs/go-oryx-lib/errors"
-	"github.com/ossrs/go-oryx-lib/logger"
 )
 
 type Room struct {
@@ -27,143 +24,136 @@ type State struct {
 	BatteryLife int64   `json:"batteryLife"`
 }
 
-func (v *Room) String() string {
-	return fmt.Sprintf("room=%v, participants=%v", v.Name, len(v.Participants))
+func (r *Room) String() string {
+	return fmt.Sprintf("room=%v, participants=%v", r.Name, len(r.Participants))
 }
 
-func (v *Room) Add(p *Participant) error {
-	v.Lock.Lock()
-	defer v.Lock.Unlock()
+func (r *Room) Add(p *Participant) error {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
 
-	for i, r := range v.InvitedParticipants {
-		if r.UserID == p.UserID {
-			v.InvitedParticipants = append(v.InvitedParticipants[:i], v.InvitedParticipants[i+1:]...)
+	for i, participant := range r.InvitedParticipants {
+		if participant.UserID == p.UserID {
+			r.InvitedParticipants = append(r.InvitedParticipants[:i], r.InvitedParticipants[i+1:]...)
 			break
 		}
 	}
 
-	for _, r := range v.Participants {
-		if r.UserID == p.UserID {
-			return errors.Errorf("Participant %v exists in room %v", p.UserID, v.Name)
-
-			// v.Participants[i] = p
-			// logger.Wf(context.Background(), "Participant %v exists in room %v", p.UserID, v.Name)
-			// return nil
-
-			// v.Participants = append(v.Participants[:i], v.Participants[i+1:]...)
-			// break
+	for _, participant := range r.Participants {
+		if participant.UserID == p.UserID {
+			return fmt.Errorf("participant %v exists in room %v", p.UserID, r.Name)
 		}
 	}
 
-	v.Participants = append(v.Participants, p)
+	r.Participants = append(r.Participants, p)
 
-	if len(v.Participants) == 2 {
+	if len(r.Participants) == 2 {
 		unixTime := time.Now().Unix()
-		v.StartedAt = &unixTime
+		r.StartedAt = &unixTime
 	}
 
 	return nil
 }
 
-func (v *Room) AddInvited(p *InvitedParticipant) error {
-	v.Lock.Lock()
-	defer v.Lock.Unlock()
+func (r *Room) AddInvited(p *InvitedParticipant) error {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
 
-	for _, r := range v.Participants {
-		if r.UserID == p.UserID {
+	for _, participant := range r.Participants {
+		if participant.UserID == p.UserID {
 			return nil
 		}
 	}
 
-	for _, r := range v.InvitedParticipants {
-		if r.UserID == p.UserID {
+	for _, participant := range r.InvitedParticipants {
+		if participant.UserID == p.UserID {
 			return nil
 		}
 	}
 
-	v.InvitedParticipants = append(v.InvitedParticipants, p)
+	r.InvitedParticipants = append(r.InvitedParticipants, p)
 	return nil
 }
 
-func (v *Room) Get(userID int64) (*Participant, error) {
-	v.Lock.RLock()
-	defer v.Lock.RUnlock()
+func (r *Room) Get(userID int64) (*Participant, error) {
+	r.Lock.RLock()
+	defer r.Lock.RUnlock()
 
-	for _, r := range v.Participants {
-		if r.UserID == userID {
-			return r, nil
+	for _, participant := range r.Participants {
+		if participant.UserID == userID {
+			return participant, nil
 		}
 	}
 
-	return nil, errors.Errorf("Participant %v does not exist in room %v", userID, v.Name)
+	return nil, fmt.Errorf("participant %v does not exist in room %v", userID, r.Name)
 }
 
-func (v *Room) ChangeState(userID int64, state State) *Participant {
-	v.Lock.Lock()
-	defer v.Lock.Unlock()
+func (r *Room) ChangeState(userID int64, state State) *Participant {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
 
-	for i, r := range v.Participants {
-		if r.UserID == userID {
-			v.Participants[i].IsMicroOn = state.IsMicroOn
-			v.Participants[i].IsCameraOn = state.IsCameraOn
-			v.Participants[i].IsSpeakerOn = state.IsSpeakerOn
-			v.Participants[i].CameraType = state.CameraType
-			v.Participants[i].BatteryLife = state.BatteryLife
+	for i, participant := range r.Participants {
+		if participant.UserID == userID {
+			r.Participants[i].IsMicroOn = state.IsMicroOn
+			r.Participants[i].IsCameraOn = state.IsCameraOn
+			r.Participants[i].IsSpeakerOn = state.IsSpeakerOn
+			r.Participants[i].CameraType = state.CameraType
+			r.Participants[i].BatteryLife = state.BatteryLife
 
-			return r
+			return participant
 		}
 	}
 
 	return nil
 }
 
-func (v *Room) Remove(p *Participant) {
-	v.Lock.Lock()
-	defer v.Lock.Unlock()
+func (r *Room) Remove(p *Participant) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
 
-	for i, r := range v.Participants {
-		if p == r {
-			v.Participants = append(v.Participants[:i], v.Participants[i+1:]...)
+	for i, participant := range r.Participants {
+		if p == participant {
+			r.Participants = append(r.Participants[:i], r.Participants[i+1:]...)
 			break
 		}
 	}
 
-	if len(v.Participants) == 0 {
-		v.StartedAt = nil
+	if len(r.Participants) == 0 {
+		r.StartedAt = nil
 	}
 }
 
-func (v *Room) Notify(ctx context.Context, peer *Participant, event, param, data string) {
+func (r *Room) Notify(ctx context.Context, peer *Participant, event, param, data string) {
 	var participants []*Participant
 	var invitedParticipants []*InvitedParticipant
 	func() {
-		v.Lock.RLock()
-		defer v.Lock.RUnlock()
-		participants = append(participants, v.Participants...)
-		invitedParticipants = append(invitedParticipants, v.InvitedParticipants...)
+		r.Lock.RLock()
+		defer r.Lock.RUnlock()
+		participants = append(participants, r.Participants...)
+		invitedParticipants = append(invitedParticipants, r.InvitedParticipants...)
 	}()
 
-	for _, r := range participants {
-		if r == peer {
+	for _, participant := range participants {
+		if participant == peer {
 			continue
 		}
 
-		res := Response{
+		response := Response{
 			Message{
 				Action:              "notify",
 				Event:               event,
 				Param:               param,
 				Data:                data,
-				Room:                v.Name,
-				Self:                r,
+				Room:                r.Name,
+				Self:                participant,
 				Peer:                peer,
 				Participants:        participants,
 				InvitedParticipants: invitedParticipants,
-				StartedAt:           v.StartedAt,
+				StartedAt:           r.StartedAt,
 			},
 		}
 
-		b, err := json.Marshal(res)
+		b, err := json.Marshal(response)
 		if err != nil {
 			return
 		}
@@ -171,9 +161,9 @@ func (v *Room) Notify(ctx context.Context, peer *Participant, event, param, data
 		select {
 		case <-ctx.Done():
 			return
-		case r.Out <- b:
+		case participant.Out <- b:
 		}
 
-		logger.Tf(ctx, "Notify %v about %v %v", r, peer, event)
+		// logger.Tf(ctx, "Notify %v about %v %v", participant, peer, event)
 	}
 }

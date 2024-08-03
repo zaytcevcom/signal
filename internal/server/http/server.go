@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 )
 
 type Server struct {
@@ -25,7 +25,7 @@ type Logger interface {
 type Application interface {
 	Health(ctx context.Context) []byte
 	Version(ctx context.Context) []byte
-	RTC(ctx context.Context, c *websocket.Conn)
+	RTC(ctx context.Context, conn *websocket.Conn)
 }
 
 func New(logger Logger, app Application, host string, port int) *Server {
