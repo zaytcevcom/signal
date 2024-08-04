@@ -1,18 +1,12 @@
-version: "3.9"
-
 services:
   httpx:
     image: ossrs/httpx:1
+    restart: always
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
       - traefik.http.routers.nginx.rule=Host(`s.zaytcev.com`)
-      - traefik.http.routers.nginx.rule=Host(`s.zaytcev.com`) || Host(`www.s.zaytcev.com`)
-      - traefik.http.services.nginx.loadBalancer.server.port=80
-      - traefik.http.middlewares.nginx-redirect.redirectRegex.regex=^(https?://)www.s.zaytcev.com/(.*)$$
-      - traefik.http.middlewares.nginx-redirect.redirectRegex.replacement=$${1}s.zaytcev.com/$${2}
-      - traefik.http.middlewares.nginx-redirect.redirectRegex.permanent=true
-      - traefik.http.routers.nginx.middlewares=nginx-redirect,secure-headers
+      - traefik.http.routers.nginx.middlewares=secure-headers
       - traefik.http.routers.nginx.entryPoints=https
       - traefik.http.routers.nginx.tls=true
       - traefik.http.routers.nginx.tls.certResolver=letsEncrypt
@@ -21,9 +15,20 @@ services:
       '-http', '80',
       '-proxy', 'http://signal:1989/sig',
       '-proxy', 'http://srs:1985/rtc',
-      '-proxy', 'http://srs:8080/'
+      '-proxy', 'http://signal-web:80/',
     ]
-    restart: unless-stopped
+    networks:
+      - traefik-public
+
+  signal:
+    image: zaytcevcom/signal:1.0.0
+    restart: always
+    networks:
+      - traefik-public
+
+  signal-web:
+    image: zaytcevcom/signal-web:1.0.0
+    restart: always
     networks:
       - traefik-public
 
@@ -34,10 +39,10 @@ services:
       - "8080:8080"
       - "1985:1985"
       - "8000:8000/udp"
+    restart: always
     networks:
       - traefik-public
 
 networks:
   traefik-public:
     external: true
-
