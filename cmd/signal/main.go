@@ -48,7 +48,7 @@ func main() {
 		}
 	}()
 
-	logg.Info(fmt.Sprintf("Demo service listening on port: %d", config.Port))
+	logg.Info(fmt.Sprintf("Service listening on port: %d", config.Port))
 
 	if err := server.Start(ctx); err != nil {
 		logg.Error("failed to start http server: " + err.Error())

@@ -153,7 +153,7 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event, param, data
 			},
 		}
 
-		b, err := json.Marshal(response)
+		message, err := json.Marshal(response)
 		if err != nil {
 			return
 		}
@@ -161,9 +161,7 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event, param, data
 		select {
 		case <-ctx.Done():
 			return
-		case participant.Out <- b:
+		case participant.Out <- message:
 		}
-
-		// logger.Tf(ctx, "Notify %v about %v %v", participant, peer, event)
 	}
 }

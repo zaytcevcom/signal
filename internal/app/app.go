@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/ossrs/go-oryx-lib/errors"
@@ -32,6 +33,17 @@ type ActionHandler func(
 ) (interface{}, error)
 
 var handlers map[string]ActionHandler
+
+const (
+	// Time allowed to write the file to the client.
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the client.
+	pongWait = 30 * time.Second
+
+	// Send pings to client with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
+)
 
 func init() {
 	handlers = map[string]ActionHandler{
@@ -63,7 +75,7 @@ func (a *App) RTC(ctx context.Context, conn *websocket.Conn) {
 	ctx, cancel := context.WithCancel(logger.WithContext(ctx))
 	defer a.closeConnection(ctx, cancel, conn)
 
-	// todo: проблема с удалением пользователя из комнаты при потери сети
+	a.heartbeat(ctx, cancel, conn)
 
 	inMessages := make(chan []byte)
 	go a.handleInMessages(ctx, cancel, conn, inMessages)
@@ -88,6 +100,41 @@ func (a *App) closeConnection(ctx context.Context, cancel context.CancelFunc, co
 	cancel()
 }
 
+func (a *App) heartbeat(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn) {
+	err := conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err != nil {
+		logger.E(ctx, err.Error())
+		return
+	}
+
+	conn.SetPongHandler(func(string) error {
+		err := conn.SetReadDeadline(time.Now().Add(pongWait))
+		if err != nil {
+			logger.E(ctx, err.Error())
+			return err
+		}
+		return nil
+	})
+
+	ticker := time.NewTicker(pingPeriod)
+
+	go func() {
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(writeWait)); err != nil {
+					cancel()
+					return
+				}
+			}
+		}
+	}()
+}
+
 func (a *App) handleInMessages(
 	ctx context.Context,
 	cancel context.CancelFunc,
@@ -100,7 +147,6 @@ func (a *App) handleInMessages(
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			logger.Wf(ctx, "[InMessages] Ignore err %v", err)
-			_ = conn.Close() // todo: нужно или закроется позже?
 			break
 		}
 
@@ -138,7 +184,7 @@ func (a *App) handleOutMessages(
 			return err
 		}
 
-		b, err := json.Marshal(Tid{action.TID, response})
+		message, err := json.Marshal(Tid{action.TID, response})
 		if err != nil {
 			return errors.Wrapf(err, "marshal")
 		}
@@ -146,7 +192,7 @@ func (a *App) handleOutMessages(
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case outMessages <- b:
+		case outMessages <- message:
 		}
 
 		return nil

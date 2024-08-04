@@ -63,7 +63,7 @@ func (s *handler) RTC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.logger.Info(fmt.Sprintf("Serve client %v at %v", r.RemoteAddr, r.RequestURI))
+	s.logger.Debug(fmt.Sprintf("Serve client %v at %v", r.RemoteAddr, r.RequestURI))
 
 	s.app.RTC(context.Background(), conn)
 }
