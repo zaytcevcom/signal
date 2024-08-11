@@ -12,8 +12,9 @@ import (
 )
 
 type App struct {
-	logger Logger
-	rooms  sync.Map
+	logger      Logger
+	rooms       sync.Map // todo: тут не нужно типизировать?
+	manageRooms chan string
 }
 
 type Logger interface {
@@ -48,9 +49,16 @@ func init() {
 }
 
 func New(logger Logger) *App {
-	return &App{
-		logger: logger,
+	a := &App{
+		logger:      logger,
+		manageRooms: make(chan string),
 	}
+
+	// todo: все ок с местом запуском горутины?
+	ctx, cancel := context.WithCancel(context.Background())
+	go a.ManageRooms(ctx, cancel)
+
+	return a
 }
 
 func (a *App) Health(_ context.Context) []byte {
@@ -61,8 +69,8 @@ func (a *App) Version(_ context.Context) []byte {
 	return []byte("1.0.1")
 }
 
-// RTC todo: можно ли тут знать о *websocket.Conn ?
-func (a *App) RTC(ctx context.Context, conn *websocket.Conn) {
+// WS todo: можно ли тут знать о *websocket.Conn ?
+func (a *App) WS(ctx context.Context, conn *websocket.Conn) {
 	ctx, cancel := context.WithCancel(logger.WithContext(ctx))
 	defer a.closeConnection(ctx, cancel, conn)
 
@@ -76,8 +84,21 @@ func (a *App) RTC(ctx context.Context, conn *websocket.Conn) {
 
 	for m := range outMessages {
 		if err := conn.WriteMessage(websocket.TextMessage, m); err != nil {
-			logger.Wf(ctx, "[RTC] Ignore err %v for %v", err, conn.RemoteAddr())
+			logger.Wf(ctx, "[WS] Ignore err %v for %v", err, conn.RemoteAddr())
 			break
+		}
+	}
+}
+
+func (a *App) ManageRooms(ctx context.Context, cancel context.CancelFunc) {
+	defer cancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case roomID := <-a.manageRooms:
+			a.rooms.Delete(roomID)
 		}
 	}
 }

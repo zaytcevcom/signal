@@ -31,7 +31,7 @@ func NewHandler(logger Logger, app Application) http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/health", h.Health).Methods(http.MethodGet)
 	r.HandleFunc("/version", h.Version).Methods(http.MethodGet)
-	r.HandleFunc("/sig/v1/rtc", h.RTC)
+	r.HandleFunc("/sig/v1/rtc", h.WS)
 	r.MethodNotAllowedHandler = http.HandlerFunc(methodNotAllowedHandler)
 	r.NotFoundHandler = http.HandlerFunc(methodNotFoundHandler)
 
@@ -56,16 +56,16 @@ func (s *handler) Version(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *handler) RTC(w http.ResponseWriter, r *http.Request) {
+func (s *handler) WS(w http.ResponseWriter, r *http.Request) {
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("RTC - response error: %s", err))
+		s.logger.Error(fmt.Sprintf("WS - response error: %s", err))
 		return
 	}
 
 	s.logger.Debug(fmt.Sprintf("Serve client %v at %v", r.RemoteAddr, r.RequestURI))
 
-	s.app.RTC(context.Background(), conn)
+	s.app.WS(context.Background(), conn)
 }
 
 func methodNotAllowedHandler(w http.ResponseWriter, _ *http.Request) {

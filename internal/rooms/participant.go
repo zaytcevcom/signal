@@ -25,7 +25,6 @@ type Participant struct {
 	Photo        *string     `json:"photo"`
 	IsHorizontal bool        `json:"isHorizontal"`
 	IsMicroOn    bool        `json:"isMicroOn"`
-	IsCameraOn   bool        `json:"isCameraOn"`
 	IsSpeakerOn  bool        `json:"isSpeakerOn"`
 	CameraType   *string     `json:"cameraType"`
 	BatteryLife  int64       `json:"batteryLife"`
@@ -35,7 +34,8 @@ func (p *Participant) String() string {
 	return fmt.Sprintf("userID=%v, room=%v", p.UserID, p.Room.Name)
 }
 
-func (p *Participant) HandleContextDone(ctx context.Context) {
+// HandleContextDone Todo: возможно есть лучше варианты, как удалить комнату если из нее вышли все участники?
+func (p *Participant) HandleContextDone(ctx context.Context, emptyRooms chan<- string) {
 	<-ctx.Done()
 	if p == nil {
 		return
@@ -43,4 +43,8 @@ func (p *Participant) HandleContextDone(ctx context.Context) {
 
 	p.Room.Remove(p)
 	p.Room.Notify(context.Background(), p, "leave", "", "")
+
+	if len(p.Room.Participants) == 0 {
+		emptyRooms <- p.Room.Name
+	}
 }

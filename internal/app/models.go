@@ -20,7 +20,6 @@ type EventJoin struct {
 		Photo        *string `json:"photo"`
 		IsHorizontal bool    `json:"isHorizontal"`
 		IsMicroOn    bool    `json:"isMicroOn"`
-		IsCameraOn   bool    `json:"isCameraOn"`
 		IsSpeakerOn  bool    `json:"isSpeakerOn"`
 		CameraType   *string `json:"cameraType"`
 		BatteryLife  int64   `json:"batteryLife"`
@@ -39,7 +38,6 @@ type EventChangeState struct {
 		Room        string  `json:"room"`
 		UserID      int64   `json:"userId"`
 		IsMicroOn   bool    `json:"isMicroOn"`
-		IsCameraOn  bool    `json:"isCameraOn"`
 		IsSpeakerOn bool    `json:"isSpeakerOn"`
 		CameraType  *string `json:"cameraType"`
 		BatteryLife int64   `json:"batteryLife"`

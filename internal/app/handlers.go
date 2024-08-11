@@ -32,12 +32,12 @@ func handleJoin(
 	r, loaded := a.rooms.Load(obj.Message.Room)
 
 	if !loaded {
-		room := &internalrooms.Room{
+		r = &internalrooms.Room{
 			Name:  obj.Message.Room,
 			Token: obj.Message.Token,
 		}
 
-		a.rooms.Store(obj.Message.Room, room)
+		a.rooms.Store(obj.Message.Room, r)
 	} else if r.(*internalrooms.Room).Token != obj.Message.Token {
 		return nil, errors.Errorf("Invalid token for room %s", obj.Message.Room)
 	}
@@ -52,7 +52,6 @@ func handleJoin(
 		Photo:        obj.Message.Photo,
 		IsHorizontal: obj.Message.IsHorizontal,
 		IsMicroOn:    obj.Message.IsMicroOn,
-		IsCameraOn:   obj.Message.IsCameraOn,
 		IsSpeakerOn:  obj.Message.IsSpeakerOn,
 		CameraType:   obj.Message.CameraType,
 		BatteryLife:  obj.Message.BatteryLife,
@@ -61,7 +60,7 @@ func handleJoin(
 		return nil, errors.Wrapf(err, "join")
 	}
 
-	go p.HandleContextDone(ctx)
+	go p.HandleContextDone(ctx, a.manageRooms)
 	logger.Tf(ctx, "Join %v ok", p)
 
 	response := ResponseJoin{
@@ -128,7 +127,6 @@ func handleChangeState(
 		obj.Message.UserID,
 		internalrooms.State{
 			IsMicroOn:   obj.Message.IsMicroOn,
-			IsCameraOn:  obj.Message.IsCameraOn,
 			IsSpeakerOn: obj.Message.IsSpeakerOn,
 			CameraType:  obj.Message.CameraType,
 			BatteryLife: obj.Message.BatteryLife,
