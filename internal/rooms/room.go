@@ -88,22 +88,21 @@ func (r *Room) Get(userID int64) (*Participant, error) {
 	return nil, fmt.Errorf("participant %v does not exist in room %v", userID, r.Name)
 }
 
-func (r *Room) ChangeState(userID int64, state State) *Participant {
+func (r *Room) ChangePublishing(p *Participant, publishing bool) {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
 
-	for i, participant := range r.Participants {
-		if participant.UserID == userID {
-			r.Participants[i].IsMicroOn = state.IsMicroOn
-			r.Participants[i].IsSpeakerOn = state.IsSpeakerOn
-			r.Participants[i].CameraType = state.CameraType
-			r.Participants[i].BatteryLife = state.BatteryLife
+	p.Publishing = publishing
+}
 
-			return participant
-		}
-	}
+func (r *Room) ChangeState(p *Participant, state State) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
 
-	return nil
+	p.IsMicroOn = state.IsMicroOn
+	p.IsSpeakerOn = state.IsSpeakerOn
+	p.CameraType = state.CameraType
+	p.BatteryLife = state.BatteryLife
 }
 
 func (r *Room) Remove(p *Participant) {

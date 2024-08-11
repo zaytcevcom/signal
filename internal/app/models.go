@@ -54,7 +54,6 @@ type EventInviteUsers struct {
 
 type ResponseJoin struct {
 	Action              string                      `json:"action"`
-	Room                string                      `json:"room"`
 	Self                *rooms.Participant          `json:"self"`
 	Participants        []*rooms.Participant        `json:"participants"`
 	InvitedParticipants []*rooms.InvitedParticipant `json:"invitedParticipants"`

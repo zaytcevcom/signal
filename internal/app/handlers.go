@@ -98,7 +98,7 @@ func handlePublish(
 		return nil, errors.Wrapf(err, "publish")
 	}
 
-	p.Publishing = true
+	r.(*internalrooms.Room).ChangePublishing(p, true)
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
 
@@ -122,8 +122,13 @@ func handleChangeState(
 		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
 	}
 
-	p := r.(*internalrooms.Room).ChangeState(
-		obj.Message.UserID,
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "changeState")
+	}
+
+	r.(*internalrooms.Room).ChangeState(
+		p,
 		internalrooms.State{
 			IsMicroOn:   obj.Message.IsMicroOn,
 			IsSpeakerOn: obj.Message.IsSpeakerOn,
@@ -154,6 +159,11 @@ func handleInviteUsers(
 		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
 	}
 
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "inviteUsers")
+	}
+
 	for _, value := range obj.Message.Participants {
 		p := &internalrooms.InvitedParticipant{
 			Room:      r.(*internalrooms.Room),
@@ -166,11 +176,6 @@ func handleInviteUsers(
 		if err := r.(*internalrooms.Room).AddInvited(p); err != nil {
 			return nil, errors.Wrapf(err, "inviteUsers")
 		}
-	}
-
-	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "inviteUsers")
 	}
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
