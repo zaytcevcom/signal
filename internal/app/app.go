@@ -42,7 +42,6 @@ func init() {
 		"join":        handleJoin,
 		"publish":     handlePublish,
 		"changeState": handleChangeState,
-		"control":     handleControl,
 		"inviteUsers": handleInviteUsers,
 		"default":     handleDefault,
 	}
@@ -54,7 +53,7 @@ func New(logger Logger) *App {
 		manageRooms: make(chan string),
 	}
 
-	// todo: все ок с местом запуском горутины?
+	// todo: все ок с местом запуска горутины?
 	ctx, cancel := context.WithCancel(context.Background())
 	go a.ManageRooms(ctx, cancel)
 

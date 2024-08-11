@@ -138,33 +138,6 @@ func handleChangeState(
 	return nil, nil
 }
 
-func handleControl(
-	ctx context.Context,
-	a *App,
-	m []byte,
-	action Action,
-	_ chan []byte,
-) (interface{}, error) {
-	obj := EventControl{}
-	if err := json.Unmarshal(m, &obj); err != nil {
-		return nil, errors.Wrapf(err, "Unmarshal %s", m)
-	}
-
-	r, loaded := a.rooms.Load(obj.Message.Room)
-	if !loaded {
-		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
-	}
-
-	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "control")
-	}
-
-	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, obj.Message.Call, obj.Message.Data)
-
-	return nil, nil
-}
-
 func handleInviteUsers(
 	ctx context.Context,
 	a *App,

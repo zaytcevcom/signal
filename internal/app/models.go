@@ -52,15 +52,6 @@ type EventInviteUsers struct {
 	} `json:"msg"`
 }
 
-type EventControl struct {
-	Message struct {
-		Room   string `json:"room"`
-		UserID int64  `json:"userId"`
-		Call   string `json:"call"`
-		Data   string `json:"data"`
-	} `json:"msg"`
-}
-
 type ResponseJoin struct {
 	Action              string                      `json:"action"`
 	Room                string                      `json:"room"`
