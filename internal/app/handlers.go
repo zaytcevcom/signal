@@ -60,19 +60,18 @@ func handleJoin(
 		return nil, errors.Wrapf(err, "join")
 	}
 
-	go p.HandleContextDone(ctx, a.manageRooms)
+	go p.HandleContextDone(ctx, a.emptyRooms)
 	logger.Tf(ctx, "Join %v ok", p)
 
 	response := ResponseJoin{
 		Action:              action.Message.Action,
-		Room:                obj.Message.Room,
 		Self:                p,
 		Participants:        r.(*internalrooms.Room).Participants,
 		InvitedParticipants: r.(*internalrooms.Room).InvitedParticipants,
 		StartedAt:           r.(*internalrooms.Room).StartedAt,
 	}
 
-	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
+	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
 
 	return response, nil
 }
@@ -101,7 +100,7 @@ func handlePublish(
 
 	p.Publishing = true
 
-	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
+	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
 
 	return nil, nil
 }
@@ -133,7 +132,7 @@ func handleChangeState(
 		},
 	)
 
-	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
+	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
 
 	return nil, nil
 }
@@ -174,7 +173,7 @@ func handleInviteUsers(
 		return nil, errors.Wrapf(err, "inviteUsers")
 	}
 
-	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
+	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
 
 	return nil, nil
 }

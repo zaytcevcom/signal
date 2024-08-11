@@ -42,7 +42,7 @@ func (p *Participant) HandleContextDone(ctx context.Context, emptyRooms chan<- s
 	}
 
 	p.Room.Remove(p)
-	p.Room.Notify(context.Background(), p, "leave", "", "")
+	p.Room.Notify(context.Background(), p, "leave")
 
 	if len(p.Room.Participants) == 0 {
 		emptyRooms <- p.Room.Name

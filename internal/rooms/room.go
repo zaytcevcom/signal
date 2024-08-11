@@ -118,7 +118,7 @@ func (r *Room) Remove(p *Participant) {
 	}
 }
 
-func (r *Room) Notify(ctx context.Context, peer *Participant, event, param, data string) {
+func (r *Room) Notify(ctx context.Context, peer *Participant, event string) {
 	var participants []*Participant
 	var invitedParticipants []*InvitedParticipant
 	func() {
@@ -137,9 +137,6 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event, param, data
 			Message{
 				Action:              "notify",
 				Event:               event,
-				Param:               param,
-				Data:                data,
-				Room:                r.Name,
 				Self:                participant,
 				Peer:                peer,
 				Participants:        participants,

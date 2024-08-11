@@ -12,9 +12,9 @@ import (
 )
 
 type App struct {
-	logger      Logger
-	rooms       sync.Map // todo: тут не нужно типизировать?
-	manageRooms chan string
+	logger     Logger
+	rooms      sync.Map // todo: тут не нужно типизировать?
+	emptyRooms chan string
 }
 
 type Logger interface {
@@ -49,13 +49,13 @@ func init() {
 
 func New(logger Logger) *App {
 	a := &App{
-		logger:      logger,
-		manageRooms: make(chan string),
+		logger:     logger,
+		emptyRooms: make(chan string),
 	}
 
 	// todo: все ок с местом запуска горутины?
 	ctx, cancel := context.WithCancel(context.Background())
-	go a.ManageRooms(ctx, cancel)
+	go a.manageRooms(ctx, cancel)
 
 	return a
 }
@@ -89,14 +89,14 @@ func (a *App) WS(ctx context.Context, conn *websocket.Conn) {
 	}
 }
 
-func (a *App) ManageRooms(ctx context.Context, cancel context.CancelFunc) {
+func (a *App) manageRooms(ctx context.Context, cancel context.CancelFunc) {
 	defer cancel()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case roomID := <-a.manageRooms:
+		case roomID := <-a.emptyRooms:
 			a.rooms.Delete(roomID)
 		}
 	}
