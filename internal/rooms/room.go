@@ -10,6 +10,7 @@ import (
 
 type Room struct {
 	Name                string                `json:"room"`
+	Token               string                `json:"-"`
 	Participants        []*Participant        `json:"participants"`
 	InvitedParticipants []*InvitedParticipant `json:"invitedParticipants"`
 	StartedAt           *int64                `json:"startedAt"`

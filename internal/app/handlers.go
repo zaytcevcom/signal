@@ -29,7 +29,19 @@ func handleJoin(
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
 	}
 
-	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
+	r, loaded := a.rooms.Load(obj.Message.Room)
+
+	if !loaded {
+		room := &internalrooms.Room{
+			Name:  obj.Message.Room,
+			Token: obj.Message.Token,
+		}
+
+		a.rooms.Store(obj.Message.Room, room)
+	} else if r.(*internalrooms.Room).Token != obj.Message.Token {
+		return nil, errors.Errorf("Invalid token for room %s", obj.Message.Room)
+	}
+
 	p := &internalrooms.Participant{
 		Room:         r.(*internalrooms.Room),
 		Out:          outMessages,
@@ -78,7 +90,10 @@ func handlePublish(
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
 	}
 
-	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
+	}
 
 	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
 	if err != nil {
@@ -104,7 +119,10 @@ func handleChangeState(
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
 	}
 
-	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
+	}
 
 	p := r.(*internalrooms.Room).ChangeState(
 		obj.Message.UserID,
@@ -134,7 +152,10 @@ func handleControl(
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
 	}
 
-	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
+	}
 
 	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
 	if err != nil {
@@ -158,7 +179,10 @@ func handleInviteUsers(
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
 	}
 
-	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
+	}
 
 	for _, value := range obj.Message.Participants {
 		p := &internalrooms.InvitedParticipant{
@@ -185,25 +209,11 @@ func handleInviteUsers(
 }
 
 func handleDefault(
-	ctx context.Context,
-	a *App,
-	m []byte,
-	action Action,
+	_ context.Context,
+	_ *App,
+	_ []byte,
+	_ Action,
 	_ chan []byte,
 ) (interface{}, error) {
-	obj := EventCustom{}
-	if err := json.Unmarshal(m, &obj); err != nil {
-		return nil, errors.Wrapf(err, "Unmarshal %s", m)
-	}
-
-	r, _ := a.rooms.LoadOrStore(obj.Message.Room, &internalrooms.Room{Name: obj.Message.Room})
-
-	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "default")
-	}
-
-	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action, "", "")
-
-	return nil, nil
+	return nil, errors.Errorf("unknown action")
 }

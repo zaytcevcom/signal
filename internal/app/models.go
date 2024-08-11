@@ -12,6 +12,7 @@ type Action struct {
 type EventJoin struct {
 	Message struct {
 		Room         string  `json:"room"`
+		Token        string  `json:"token"`
 		UserID       int64   `json:"userId"`
 		FirstName    string  `json:"firstName"`
 		LastName     string  `json:"lastName"`
@@ -59,13 +60,6 @@ type EventControl struct {
 		UserID int64  `json:"userId"`
 		Call   string `json:"call"`
 		Data   string `json:"data"`
-	} `json:"msg"`
-}
-
-type EventCustom struct {
-	Message struct {
-		Room   string `json:"room"`
-		UserID int64  `json:"userId"`
 	} `json:"msg"`
 }
 
