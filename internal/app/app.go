@@ -39,11 +39,11 @@ const (
 
 func init() {
 	handlers = map[string]ActionHandler{
-		"join":        handleJoin,
+		"accept":      handleAccept,
+		"decline":     handleDecline,
 		"publish":     handlePublish,
 		"changeState": handleChangeState,
 		"inviteUsers": handleInviteUsers,
-		"default":     handleDefault,
 	}
 }
 
@@ -78,13 +78,23 @@ func (a *App) WS(ctx context.Context, conn *websocket.Conn) {
 	inMessages := make(chan []byte)
 	go a.handleInMessages(ctx, cancel, conn, inMessages)
 
+	preconnectMessages := make(chan []byte)
 	outMessages := make(chan []byte)
-	go a.handleOutMessages(ctx, cancel, inMessages, outMessages)
+	go a.handleOutMessages(ctx, cancel, inMessages, preconnectMessages, outMessages)
 
-	for m := range outMessages {
-		if err := conn.WriteMessage(websocket.TextMessage, m); err != nil {
-			logger.Wf(ctx, "[WS] Ignore err %v for %v", err, conn.RemoteAddr())
-			break
+	for {
+		select {
+		case <-ctx.Done():
+		case m := <-preconnectMessages:
+			if err := conn.WriteMessage(websocket.TextMessage, m); err != nil {
+				logger.Wf(ctx, "[WS preconect] Ignore err %v for %v", err, conn.RemoteAddr())
+				break
+			}
+		case m := <-outMessages:
+			if err := conn.WriteMessage(websocket.TextMessage, m); err != nil {
+				logger.Wf(ctx, "[WS main] Ignore err %v for %v", err, conn.RemoteAddr())
+				break
+			}
 		}
 	}
 }
@@ -173,6 +183,7 @@ func (a *App) handleOutMessages(
 	ctx context.Context,
 	cancel context.CancelFunc,
 	inMessages chan []byte,
+	preconnectMessages chan []byte,
 	outMessages chan []byte,
 ) {
 	defer cancel()
@@ -184,15 +195,31 @@ func (a *App) handleOutMessages(
 		}
 
 		var response interface{}
-		actionType := action.Message.Action
-		handler, ok := handlers[actionType]
-		if !ok {
-			handler = handlers["default"]
-		}
+		var err error
 
-		response, err := handler(ctx, a, m, action, outMessages)
-		if err != nil {
-			return err
+		actionType := action.Message.Action
+
+		switch actionType {
+		case "preconnect":
+			response, err = handlePreconnect(ctx, a, m, action, preconnectMessages)
+			if err != nil {
+				return err
+			}
+		case "join":
+			response, err = handleJoin(ctx, a, m, action, outMessages)
+			if err != nil {
+				return err
+			}
+		default:
+			handler, ok := handlers[actionType]
+			if !ok {
+				return errors.Errorf("unknown action")
+			}
+
+			response, err = handler(ctx, a, m, action)
+			if err != nil {
+				return err
+			}
 		}
 
 		message, err := json.Marshal(Tid{action.TID, response})

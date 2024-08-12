@@ -9,6 +9,14 @@ type Action struct {
 	} `json:"msg"`
 }
 
+type EventPreconnect struct {
+	Message struct {
+		Room     string `json:"room"`
+		UserID   int64  `json:"userId"`
+		DeviceID string `json:"deviceId"`
+	} `json:"msg"`
+}
+
 type EventJoin struct {
 	Message struct {
 		Room         string  `json:"room"`
@@ -26,7 +34,7 @@ type EventJoin struct {
 	} `json:"msg"`
 }
 
-type EventLeave struct {
+type EventPublish struct {
 	Message struct {
 		Room   string `json:"room"`
 		UserID int64  `json:"userId"`
@@ -50,6 +58,11 @@ type EventInviteUsers struct {
 		UserID       int64                       `json:"userId"`
 		Participants []*rooms.InvitedParticipant `json:"participants"`
 	} `json:"msg"`
+}
+
+type ResponsePreconnect struct {
+	Action string        `json:"action"`
+	Device *rooms.Device `json:"device"`
 }
 
 type ResponseJoin struct {

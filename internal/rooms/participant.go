@@ -5,24 +5,15 @@ import (
 	"fmt"
 )
 
-type InvitedParticipant struct {
-	Room      *Room   `json:"-"`
-	UserID    int64   `json:"userId"`
-	FirstName string  `json:"firstName"`
-	LastName  string  `json:"lastName"`
-	Status    *string `json:"status"`
-	Photo     *string `json:"photo"`
-}
-
 type Participant struct {
 	Room         *Room       `json:"-"`
-	Publishing   bool        `json:"publishing"`
 	Out          chan []byte `json:"-"`
 	UserID       int64       `json:"userId"`
 	FirstName    string      `json:"firstName"`
 	LastName     string      `json:"lastName"`
 	Status       *string     `json:"status"`
 	Photo        *string     `json:"photo"`
+	Publishing   bool        `json:"publishing"`
 	IsHorizontal bool        `json:"isHorizontal"`
 	IsMicroOn    bool        `json:"isMicroOn"`
 	IsSpeakerOn  bool        `json:"isSpeakerOn"`

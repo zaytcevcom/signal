@@ -9,8 +9,9 @@ import (
 )
 
 type Room struct {
-	Name                string                `json:"room"`
+	Name                string                `json:"-"`
 	Token               string                `json:"-"`
+	UserDevices         sync.Map              `json:"-"` // todo: тут не нужно типизировать?
 	Participants        []*Participant        `json:"participants"`
 	InvitedParticipants []*InvitedParticipant `json:"invitedParticipants"`
 	StartedAt           *int64                `json:"startedAt"`
@@ -75,6 +76,110 @@ func (r *Room) AddInvited(p *InvitedParticipant) error {
 	return nil
 }
 
+func (r *Room) AddDevice(d *Device) error {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
+
+	value, _ := r.UserDevices.LoadOrStore(d.UserID, make([]*Device, 0))
+
+	devices, ok := value.([]*Device)
+	if !ok {
+		return fmt.Errorf("couldn't load devices for user: %d", d.UserID)
+	}
+
+	for _, device := range devices {
+		if device.ID == d.ID {
+			return nil
+		}
+	}
+
+	devices = append(devices, d)
+	r.UserDevices.Store(d.UserID, devices)
+	return nil
+}
+
+func (r *Room) RemoveDevice(d *Device) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
+
+	value, _ := r.UserDevices.LoadOrStore(d.UserID, make([]*Device, 0))
+
+	devices, ok := value.([]*Device)
+	if !ok {
+		return
+	}
+
+	for i, device := range devices {
+		if d == device {
+			devices = append(devices[:i], devices[i+1:]...)
+			r.UserDevices.Store(d.UserID, devices)
+			return
+		}
+	}
+}
+
+func (r *Room) GetDeviceHistory(userID int64) (*Device, error) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
+
+	value, _ := r.UserDevices.LoadOrStore(userID, make([]*Device, 0))
+
+	devices, ok := value.([]*Device)
+	if !ok {
+		return nil, fmt.Errorf("couldn't parse devices for user: %d", userID)
+	}
+
+	for _, device := range devices {
+		if device.Status != "" {
+			return device, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (r *Room) Accept(userID int64, deviceID string) (*Device, error) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
+
+	value, _ := r.UserDevices.LoadOrStore(userID, make([]*Device, 0))
+
+	devices, ok := value.([]*Device)
+	if !ok {
+		return nil, fmt.Errorf("couldn't load devices for user: %d", userID)
+	}
+
+	for _, device := range devices {
+		if device.ID == deviceID {
+			device.Status = "accept"
+			return device, nil
+		}
+	}
+
+	return nil, fmt.Errorf("device not found for user: %d", userID)
+}
+
+func (r *Room) Decline(userID int64, deviceID string) (*Device, error) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
+
+	value, _ := r.UserDevices.LoadOrStore(userID, make([]*Device, 0))
+
+	devices, ok := value.([]*Device)
+	if !ok {
+		return nil, fmt.Errorf("couldn't load devices for user: %d", userID)
+	}
+
+	for _, device := range devices {
+		if device.ID == deviceID {
+			device.Status = "decline"
+			return device, nil
+		}
+	}
+
+	return nil, fmt.Errorf("device not found for user: %d", userID)
+}
+
 func (r *Room) Get(userID int64) (*Participant, error) {
 	r.Lock.RLock()
 	defer r.Lock.RUnlock()
@@ -117,6 +222,49 @@ func (r *Room) Remove(p *Participant) {
 	}
 }
 
+func (r *Room) NotifyPreconnect(ctx context.Context, d *Device, event string) {
+	var devices []*Device
+	func() {
+		r.Lock.RLock()
+		defer r.Lock.RUnlock()
+
+		value, _ := r.UserDevices.LoadOrStore(d.UserID, make([]*Device, 0))
+
+		items, ok := value.([]*Device)
+		if !ok {
+			return
+		}
+
+		devices = append(devices, items...)
+	}()
+
+	for _, device := range devices {
+		if device == d {
+			continue
+		}
+
+		response := NotifyPreconnectResponse{
+			NotifyPreconnectMessage{
+				Action:   "notify",
+				Event:    event,
+				UserID:   d.UserID,
+				DeviceID: d.ID,
+			},
+		}
+
+		message, err := json.Marshal(response)
+		if err != nil {
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case device.Out <- message:
+		}
+	}
+}
+
 func (r *Room) Notify(ctx context.Context, peer *Participant, event string) {
 	var participants []*Participant
 	var invitedParticipants []*InvitedParticipant
@@ -132,8 +280,8 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event string) {
 			continue
 		}
 
-		response := Response{
-			Message{
+		response := NotifyResponse{
+			NotifyMessage{
 				Action:              "notify",
 				Event:               event,
 				Self:                participant,
