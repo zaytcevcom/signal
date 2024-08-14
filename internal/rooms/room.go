@@ -22,7 +22,7 @@ type State struct {
 	IsMicroOn   bool    `json:"isMicroOn"`
 	IsSpeakerOn bool    `json:"isSpeakerOn"`
 	CameraType  *string `json:"cameraType"`
-	BatteryLife int64   `json:"batteryLife"`
+	BatteryLife float64 `json:"batteryLife"`
 }
 
 func (r *Room) String() string {

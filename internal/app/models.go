@@ -30,7 +30,7 @@ type EventJoin struct {
 		IsMicroOn    bool    `json:"isMicroOn"`
 		IsSpeakerOn  bool    `json:"isSpeakerOn"`
 		CameraType   *string `json:"cameraType"`
-		BatteryLife  int64   `json:"batteryLife"`
+		BatteryLife  float64 `json:"batteryLife"`
 	} `json:"msg"`
 }
 
@@ -48,7 +48,7 @@ type EventChangeState struct {
 		IsMicroOn   bool    `json:"isMicroOn"`
 		IsSpeakerOn bool    `json:"isSpeakerOn"`
 		CameraType  *string `json:"cameraType"`
-		BatteryLife int64   `json:"batteryLife"`
+		BatteryLife float64 `json:"batteryLife"`
 	} `json:"msg"`
 }
 
