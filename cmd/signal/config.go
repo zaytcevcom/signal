@@ -3,8 +3,9 @@ package main
 import "github.com/spf13/viper"
 
 type Config struct {
-	Logger loggerConf
-	Port   int
+	Logger          loggerConf
+	Port            int
+	MediaServerHost string
 }
 
 type loggerConf struct {

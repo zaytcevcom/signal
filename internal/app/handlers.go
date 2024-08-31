@@ -3,9 +3,12 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strconv"
 
 	"github.com/ossrs/go-oryx-lib/errors"
 	"github.com/ossrs/go-oryx-lib/logger"
+	client "signal/internal/restclient"
 	internalrooms "signal/internal/rooms"
 )
 
@@ -257,6 +260,86 @@ func handlePublish(
 	return nil, nil
 }
 
+func handleStreamPublish(
+	ctx context.Context,
+	a *App,
+	m []byte,
+	_ Action,
+) (interface{}, error) {
+	obj := EventStreamPublish{}
+	if err := json.Unmarshal(m, &obj); err != nil {
+		return nil, errors.Wrapf(err, "Unmarshal %s", m)
+	}
+
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, nil
+	}
+
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "streamPublish")
+	}
+
+	data := Stream{
+		StreamURL: getWebrtcURL(a.mediaServerHost, r.(*internalrooms.Room).Name, p.UserID),
+		Sdp:       obj.Message.SDP,
+	}
+
+	body, err := client.New().Post(ctx, "https://"+a.mediaServerHost+"/rtc/v1/publish/", data)
+	if err != nil {
+		return nil, errors.Wrapf(err, "streamPublish (post)")
+	}
+
+	var response ResponseStream
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response data: %w", err)
+	}
+
+	return &response, nil
+}
+
+func handleStreamPlay(
+	ctx context.Context,
+	a *App,
+	m []byte,
+	_ Action,
+) (interface{}, error) {
+	obj := EventStreamPlay{}
+	if err := json.Unmarshal(m, &obj); err != nil {
+		return nil, errors.Wrapf(err, "Unmarshal %s", m)
+	}
+
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, nil
+	}
+
+	_, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "streamPlay")
+	}
+
+	data := Stream{
+		StreamURL: getWebrtcURL(a.mediaServerHost, r.(*internalrooms.Room).Name, obj.Message.ParticipantID),
+		Sdp:       obj.Message.SDP,
+	}
+
+	body, err := client.New().Post(ctx, "https://"+a.mediaServerHost+"/rtc/v1/play/", data)
+	if err != nil {
+		return nil, errors.Wrapf(err, "streamPlay (post)")
+	}
+
+	var response ResponseStream
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response data: %w", err)
+	}
+
+	return &response, nil
+}
+
 func handleChangeState(
 	ctx context.Context,
 	a *App,
@@ -361,4 +444,8 @@ func handleInviteUsers(
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
 
 	return nil, nil
+}
+
+func getWebrtcURL(host string, roomName string, userID int64) string {
+	return "webrtc://" + host + "/" + roomName + "/" + strconv.Itoa(int(userID))
 }

@@ -2,5 +2,6 @@
   "logger": {
     "level": "INFO"
   },
-  "port": 1989
+  "port": 1989,
+  "mediaServerHost": "call.lo.ink"
 }

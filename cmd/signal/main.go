@@ -35,7 +35,7 @@ func main() {
 
 	logg := internallogger.New(config.Logger.Level, nil)
 
-	server := internalhttp.New(logg, internalapp.New(logg), "", config.Port)
+	server := internalhttp.New(logg, internalapp.New(logg, config.MediaServerHost), "", config.Port)
 
 	go func() {
 		<-ctx.Done()

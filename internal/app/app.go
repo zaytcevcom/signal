@@ -12,9 +12,10 @@ import (
 )
 
 type App struct {
-	logger     Logger
-	rooms      sync.Map // todo: тут не нужно типизировать?
-	emptyRooms chan string
+	logger          Logger
+	rooms           sync.Map // todo: тут не нужно типизировать?
+	emptyRooms      chan string
+	mediaServerHost string
 }
 
 type Logger interface {
@@ -39,20 +40,23 @@ const (
 
 func init() {
 	handlers = map[string]ActionHandler{
-		"accept":      handleAccept,
-		"decline":     handleDecline,
-		"busy":        handleBusy,
-		"publish":     handlePublish,
-		"changeState": handleChangeState,
-		"speak":       handleSpeak,
-		"inviteUsers": handleInviteUsers,
+		"accept":        handleAccept,
+		"decline":       handleDecline,
+		"busy":          handleBusy,
+		"publish":       handlePublish,
+		"streamPublish": handleStreamPublish,
+		"streamPlay":    handleStreamPlay,
+		"changeState":   handleChangeState,
+		"speak":         handleSpeak,
+		"inviteUsers":   handleInviteUsers,
 	}
 }
 
-func New(logger Logger) *App {
+func New(logger Logger, mediaServerHost string) *App {
 	a := &App{
-		logger:     logger,
-		emptyRooms: make(chan string),
+		logger:          logger,
+		emptyRooms:      make(chan string),
+		mediaServerHost: mediaServerHost,
 	}
 
 	// todo: все ок с местом запуска горутины?

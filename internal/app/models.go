@@ -43,6 +43,23 @@ type EventPublish struct {
 	} `json:"msg"`
 }
 
+type EventStreamPublish struct {
+	Message struct {
+		Room   string `json:"room"`
+		UserID int64  `json:"userId"`
+		SDP    string `json:"sdp"`
+	} `json:"msg"`
+}
+
+type EventStreamPlay struct {
+	Message struct {
+		Room          string `json:"room"`
+		UserID        int64  `json:"userId"`
+		SDP           string `json:"sdp"`
+		ParticipantID int64  `json:"participantId"`
+	} `json:"msg"`
+}
+
 type EventChangeState struct {
 	Message struct {
 		Room        string  `json:"room"`
@@ -83,7 +100,21 @@ type ResponseJoin struct {
 	StartedAt           *int64                      `json:"startedAt"`
 }
 
+type ResponseStream struct {
+	Code      int64  `json:"code"`
+	Pid       string `json:"pid"`
+	SDP       string `json:"sdp"`
+	Server    string `json:"server"`
+	Service   string `json:"service"`
+	SessionID string `json:"sessionid"`
+}
+
 type Tid struct {
 	TID     string      `json:"tid"`
 	Message interface{} `json:"msg"`
+}
+
+type Stream struct {
+	StreamURL string `json:"streamurl"`
+	Sdp       string `json:"sdp"`
 }
