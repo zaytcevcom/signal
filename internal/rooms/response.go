@@ -24,3 +24,14 @@ type NotifyPreconnectMessage struct {
 	UserID   int64  `json:"userId"`
 	DeviceID string `json:"deviceId"`
 }
+
+type NotifySpeakResponse struct {
+	Message NotifySpeakMessage `json:"msg"`
+}
+
+type NotifySpeakMessage struct {
+	Action string  `json:"action"`
+	Event  string  `json:"event"`
+	UserID int64   `json:"userId"`
+	Level  float64 `json:"level"`
+}

@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/ossrs/go-oryx-lib/logger"
 )
 
 type Room struct {
 	Name                string                `json:"-"`
 	Token               string                `json:"-"`
-	UserDevices         sync.Map              `json:"-"` // todo: тут не нужно типизировать?
+	Devices             []*Device             `json:"-"`
 	Participants        []*Participant        `json:"participants"`
 	InvitedParticipants []*InvitedParticipant `json:"invitedParticipants"`
 	StartedAt           *int64                `json:"startedAt"`
@@ -80,21 +82,13 @@ func (r *Room) AddDevice(d *Device) error {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
 
-	value, _ := r.UserDevices.LoadOrStore(d.UserID, make([]*Device, 0))
-
-	devices, ok := value.([]*Device)
-	if !ok {
-		return fmt.Errorf("couldn't load devices for user: %d", d.UserID)
-	}
-
-	for _, device := range devices {
+	for _, device := range r.Devices {
 		if device.ID == d.ID {
-			return nil
+			return fmt.Errorf("device %v exists in room %v", d.ID, r.Name)
 		}
 	}
 
-	devices = append(devices, d)
-	r.UserDevices.Store(d.UserID, devices)
+	r.Devices = append(r.Devices, d)
 	return nil
 }
 
@@ -102,18 +96,11 @@ func (r *Room) RemoveDevice(d *Device) {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
 
-	value, _ := r.UserDevices.LoadOrStore(d.UserID, make([]*Device, 0))
-
-	devices, ok := value.([]*Device)
-	if !ok {
-		return
-	}
-
-	for i, device := range devices {
-		if d == device {
-			devices = append(devices[:i], devices[i+1:]...)
-			r.UserDevices.Store(d.UserID, devices)
-			return
+	for i, device := range r.Devices {
+		if device == d {
+			logger.Tf(context.Background(), "Remove device: %v", d)
+			r.Devices = append(r.Devices[:i], r.Devices[i+1:]...)
+			break
 		}
 	}
 }
@@ -122,15 +109,14 @@ func (r *Room) GetDeviceHistory(userID int64) (*Device, error) {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
 
-	value, _ := r.UserDevices.LoadOrStore(userID, make([]*Device, 0))
-
-	devices, ok := value.([]*Device)
-	if !ok {
-		return nil, fmt.Errorf("couldn't parse devices for user: %d", userID)
+	for _, device := range r.Devices {
+		if (device.Status == DeclineStatus || device.Status == BusyStatus) && device.UserID != userID {
+			return device, nil
+		}
 	}
 
-	for _, device := range devices {
-		if device.Status != "" {
+	for _, device := range r.Devices {
+		if device.Status != "" && device.UserID == userID {
 			return device, nil
 		}
 	}
@@ -138,46 +124,46 @@ func (r *Room) GetDeviceHistory(userID int64) (*Device, error) {
 	return nil, nil
 }
 
-func (r *Room) Accept(userID int64, deviceID string) (*Device, error) {
+func (r *Room) Accept(deviceID string) (*Device, error) {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
 
-	value, _ := r.UserDevices.LoadOrStore(userID, make([]*Device, 0))
-
-	devices, ok := value.([]*Device)
-	if !ok {
-		return nil, fmt.Errorf("couldn't load devices for user: %d", userID)
-	}
-
-	for _, device := range devices {
+	for _, device := range r.Devices {
 		if device.ID == deviceID {
-			device.Status = "accept"
+			device.Status = AcceptStatus
 			return device, nil
 		}
 	}
 
-	return nil, fmt.Errorf("device not found for user: %d", userID)
+	return nil, fmt.Errorf("(accept) device %v not found", deviceID)
 }
 
-func (r *Room) Decline(userID int64, deviceID string) (*Device, error) {
+func (r *Room) Decline(deviceID string) (*Device, error) {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
 
-	value, _ := r.UserDevices.LoadOrStore(userID, make([]*Device, 0))
-
-	devices, ok := value.([]*Device)
-	if !ok {
-		return nil, fmt.Errorf("couldn't load devices for user: %d", userID)
-	}
-
-	for _, device := range devices {
+	for _, device := range r.Devices {
 		if device.ID == deviceID {
-			device.Status = "decline"
+			device.Status = DeclineStatus
 			return device, nil
 		}
 	}
 
-	return nil, fmt.Errorf("device not found for user: %d", userID)
+	return nil, fmt.Errorf("(decline) device %v not found", deviceID)
+}
+
+func (r *Room) Busy(deviceID string) (*Device, error) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
+
+	for _, device := range r.Devices {
+		if device.ID == deviceID {
+			device.Status = BusyStatus
+			return device, nil
+		}
+	}
+
+	return nil, fmt.Errorf("(busy) device %v not found", deviceID)
 }
 
 func (r *Room) Get(userID int64) (*Participant, error) {
@@ -228,14 +214,7 @@ func (r *Room) NotifyPreconnect(ctx context.Context, d *Device, event string) {
 		r.Lock.RLock()
 		defer r.Lock.RUnlock()
 
-		value, _ := r.UserDevices.LoadOrStore(d.UserID, make([]*Device, 0))
-
-		items, ok := value.([]*Device)
-		if !ok {
-			return
-		}
-
-		devices = append(devices, items...)
+		devices = append(devices, r.Devices...)
 	}()
 
 	for _, device := range devices {
@@ -276,10 +255,6 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event string) {
 	}()
 
 	for _, participant := range participants {
-		if participant == peer {
-			continue
-		}
-
 		response := NotifyResponse{
 			NotifyMessage{
 				Action:              "notify",
@@ -289,6 +264,39 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event string) {
 				Participants:        participants,
 				InvitedParticipants: invitedParticipants,
 				StartedAt:           r.StartedAt,
+			},
+		}
+
+		message, err := json.Marshal(response)
+		if err != nil {
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case participant.Out <- message:
+		}
+	}
+}
+
+func (r *Room) NotifySpeak(ctx context.Context, userID int64, level float64, event string) {
+	var participants []*Participant
+	var invitedParticipants []*InvitedParticipant
+	func() {
+		r.Lock.RLock()
+		defer r.Lock.RUnlock()
+		participants = append(participants, r.Participants...)
+		invitedParticipants = append(invitedParticipants, r.InvitedParticipants...)
+	}()
+
+	for _, participant := range participants {
+		response := NotifySpeakResponse{
+			NotifySpeakMessage{
+				Action: "notify",
+				Event:  event,
+				UserID: userID,
+				Level:  level,
 			},
 		}
 

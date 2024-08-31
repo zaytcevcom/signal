@@ -2,10 +2,16 @@ package rooms
 
 import "context"
 
+const (
+	AcceptStatus  string = "accept"
+	DeclineStatus string = "decline"
+	BusyStatus    string = "busy"
+)
+
 type Device struct {
 	Room   *Room       `json:"-"`
 	Out    chan []byte `json:"-"`
-	UserID int64       `json:"-"`
+	UserID int64       `json:"userId"`
 	ID     string      `json:"id"`
 	Status string      `json:"status"`
 }

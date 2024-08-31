@@ -12,6 +12,7 @@ type Action struct {
 type EventPreconnect struct {
 	Message struct {
 		Room     string `json:"room"`
+		Token    string `json:"token"`
 		UserID   int64  `json:"userId"`
 		DeviceID string `json:"deviceId"`
 	} `json:"msg"`
@@ -25,6 +26,7 @@ type EventJoin struct {
 		FirstName    string  `json:"firstName"`
 		LastName     string  `json:"lastName"`
 		Status       *string `json:"status"`
+		Sex          *int64  `json:"sex"`
 		Photo        *string `json:"photo"`
 		IsHorizontal bool    `json:"isHorizontal"`
 		IsMicroOn    bool    `json:"isMicroOn"`
@@ -49,6 +51,14 @@ type EventChangeState struct {
 		IsSpeakerOn bool    `json:"isSpeakerOn"`
 		CameraType  *string `json:"cameraType"`
 		BatteryLife float64 `json:"batteryLife"`
+	} `json:"msg"`
+}
+
+type EventSpeak struct {
+	Message struct {
+		Room   string  `json:"room"`
+		UserID int64   `json:"userId"`
+		Level  float64 `json:"level"`
 	} `json:"msg"`
 }
 

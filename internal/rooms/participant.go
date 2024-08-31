@@ -12,6 +12,7 @@ type Participant struct {
 	FirstName    string      `json:"firstName"`
 	LastName     string      `json:"lastName"`
 	Status       *string     `json:"status"`
+	Sex          *int64      `json:"sex"`
 	Photo        *string     `json:"photo"`
 	Publishing   bool        `json:"publishing"`
 	IsHorizontal bool        `json:"isHorizontal"`

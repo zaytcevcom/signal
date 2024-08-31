@@ -23,14 +23,24 @@ func handlePreconnect(
 	action Action,
 	outMessages chan []byte,
 ) (interface{}, error) {
+	logger.Tf(ctx, "Preconnect start")
+
 	obj := EventPreconnect{}
 	if err := json.Unmarshal(m, &obj); err != nil {
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
 	}
 
 	r, loaded := a.rooms.Load(obj.Message.Room)
+
 	if !loaded {
-		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
+		r = &internalrooms.Room{
+			Name:  obj.Message.Room,
+			Token: obj.Message.Token,
+		}
+
+		a.rooms.Store(obj.Message.Room, r)
+	} else if r.(*internalrooms.Room).Token != obj.Message.Token {
+		return nil, errors.Errorf("Invalid token for room %s", obj.Message.Room)
 	}
 
 	d := &internalrooms.Device{
@@ -58,6 +68,9 @@ func handlePreconnect(
 		Device: device,
 	}
 
+	logger.Tf(ctx, "History: %v", device)
+	logger.Tf(ctx, "Preconnect %v ok", d)
+
 	return response, nil
 }
 
@@ -67,6 +80,8 @@ func handleAccept(
 	m []byte,
 	action Action,
 ) (interface{}, error) {
+	logger.Tf(ctx, "Accept start")
+
 	obj := EventPreconnect{}
 	if err := json.Unmarshal(m, &obj); err != nil {
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
@@ -77,10 +92,12 @@ func handleAccept(
 		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
 	}
 
-	d, err := r.(*internalrooms.Room).Accept(obj.Message.UserID, obj.Message.DeviceID)
+	d, err := r.(*internalrooms.Room).Accept(obj.Message.DeviceID)
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Tf(ctx, "Accept %v ok", d)
 
 	go r.(*internalrooms.Room).NotifyPreconnect(ctx, d, action.Message.Action)
 
@@ -93,6 +110,8 @@ func handleDecline(
 	m []byte,
 	action Action,
 ) (interface{}, error) {
+	logger.Tf(ctx, "Decline start")
+
 	obj := EventPreconnect{}
 	if err := json.Unmarshal(m, &obj); err != nil {
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
@@ -103,10 +122,42 @@ func handleDecline(
 		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
 	}
 
-	d, err := r.(*internalrooms.Room).Decline(obj.Message.UserID, obj.Message.DeviceID)
+	d, err := r.(*internalrooms.Room).Decline(obj.Message.DeviceID)
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Tf(ctx, "Decline %v ok", d)
+
+	go r.(*internalrooms.Room).NotifyPreconnect(ctx, d, action.Message.Action)
+
+	return nil, nil
+}
+
+func handleBusy(
+	ctx context.Context,
+	a *App,
+	m []byte,
+	action Action,
+) (interface{}, error) {
+	logger.Tf(ctx, "Busy start")
+
+	obj := EventPreconnect{}
+	if err := json.Unmarshal(m, &obj); err != nil {
+		return nil, errors.Wrapf(err, "Unmarshal %s", m)
+	}
+
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
+	}
+
+	d, err := r.(*internalrooms.Room).Busy(obj.Message.DeviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Tf(ctx, "Busy %v ok", d)
 
 	go r.(*internalrooms.Room).NotifyPreconnect(ctx, d, action.Message.Action)
 
@@ -145,6 +196,7 @@ func handleJoin(
 		FirstName:    obj.Message.FirstName,
 		LastName:     obj.Message.LastName,
 		Status:       obj.Message.Status,
+		Sex:          obj.Message.Sex,
 		Photo:        obj.Message.Photo,
 		Publishing:   false,
 		IsHorizontal: obj.Message.IsHorizontal,
@@ -179,6 +231,8 @@ func handlePublish(
 	m []byte,
 	action Action,
 ) (interface{}, error) {
+	logger.Tf(ctx, "Publish start")
+
 	obj := EventPublish{}
 	if err := json.Unmarshal(m, &obj); err != nil {
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
@@ -195,6 +249,8 @@ func handlePublish(
 	}
 
 	r.(*internalrooms.Room).ChangePublishing(p, true)
+
+	logger.Tf(ctx, "Publish %v ok", p)
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
 
@@ -214,7 +270,7 @@ func handleChangeState(
 
 	r, loaded := a.rooms.Load(obj.Message.Room)
 	if !loaded {
-		return nil, errors.Errorf("room %s does not exist", obj.Message.Room)
+		return nil, nil
 	}
 
 	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
@@ -237,12 +293,40 @@ func handleChangeState(
 	return nil, nil
 }
 
+func handleSpeak(
+	ctx context.Context,
+	a *App,
+	m []byte,
+	action Action,
+) (interface{}, error) {
+	obj := EventSpeak{}
+	if err := json.Unmarshal(m, &obj); err != nil {
+		return nil, errors.Wrapf(err, "Unmarshal %s", m)
+	}
+
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, nil
+	}
+
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "speak")
+	}
+
+	go r.(*internalrooms.Room).NotifySpeak(ctx, p.UserID, obj.Message.Level, action.Message.Action)
+
+	return nil, nil
+}
+
 func handleInviteUsers(
 	ctx context.Context,
 	a *App,
 	m []byte,
 	action Action,
 ) (interface{}, error) {
+	logger.Tf(ctx, "InviteUsers start")
+
 	obj := EventInviteUsers{}
 	if err := json.Unmarshal(m, &obj); err != nil {
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
@@ -270,6 +354,8 @@ func handleInviteUsers(
 		if err := r.(*internalrooms.Room).AddInvited(invitedPeer); err != nil {
 			return nil, errors.Wrapf(err, "inviteUsers")
 		}
+
+		logger.Tf(ctx, "InviteUser %v ok", invitedPeer)
 	}
 
 	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)

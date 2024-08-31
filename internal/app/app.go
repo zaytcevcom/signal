@@ -41,8 +41,10 @@ func init() {
 	handlers = map[string]ActionHandler{
 		"accept":      handleAccept,
 		"decline":     handleDecline,
+		"busy":        handleBusy,
 		"publish":     handlePublish,
 		"changeState": handleChangeState,
+		"speak":       handleSpeak,
 		"inviteUsers": handleInviteUsers,
 	}
 }
@@ -85,6 +87,7 @@ func (a *App) WS(ctx context.Context, conn *websocket.Conn) {
 	for {
 		select {
 		case <-ctx.Done():
+			return
 		case m := <-preconnectMessages:
 			if err := conn.WriteMessage(websocket.TextMessage, m); err != nil {
 				logger.Wf(ctx, "[WS preconect] Ignore err %v for %v", err, conn.RemoteAddr())
