@@ -291,6 +291,10 @@ func (r *Room) NotifySpeak(ctx context.Context, userID int64, level float64, eve
 	}()
 
 	for _, participant := range participants {
+		if participant.UserID == userID {
+			continue
+		}
+
 		response := NotifySpeakResponse{
 			NotifySpeakMessage{
 				Action: "notify",
