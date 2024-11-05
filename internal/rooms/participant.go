@@ -20,6 +20,7 @@ type Participant struct {
 	IsSpeakerOn  bool        `json:"isSpeakerOn"`
 	CameraType   *string     `json:"cameraType"`
 	BatteryLife  float64     `json:"batteryLife"`
+	IsReady      bool        `json:"isReady"`
 }
 
 func (p *Participant) String() string {

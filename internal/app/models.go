@@ -33,6 +33,7 @@ type EventJoin struct {
 		IsSpeakerOn  bool    `json:"isSpeakerOn"`
 		CameraType   *string `json:"cameraType"`
 		BatteryLife  float64 `json:"batteryLife"`
+		IsReady      bool    `json:"isReady"`
 	} `json:"msg"`
 }
 
@@ -57,6 +58,13 @@ type EventStreamPlay struct {
 		UserID        int64  `json:"userId"`
 		SDP           string `json:"sdp"`
 		ParticipantID int64  `json:"participantId"`
+	} `json:"msg"`
+}
+
+type EventReady struct {
+	Message struct {
+		Room   string `json:"room"`
+		UserID int64  `json:"userId"`
 	} `json:"msg"`
 }
 

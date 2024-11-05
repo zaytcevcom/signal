@@ -46,6 +46,7 @@ func init() {
 		"publish":       handlePublish,
 		"streamPublish": handleStreamPublish,
 		"streamPlay":    handleStreamPlay,
+		"ready":         handleReady,
 		"changeState":   handleChangeState,
 		"speak":         handleSpeak,
 		"inviteUsers":   handleInviteUsers,

@@ -186,6 +186,13 @@ func (r *Room) ChangePublishing(p *Participant, publishing bool) {
 	p.Publishing = publishing
 }
 
+func (r *Room) Ready(p *Participant) {
+	r.Lock.Lock()
+	defer r.Lock.Unlock()
+
+	p.IsReady = true
+}
+
 func (r *Room) ChangeState(p *Participant, state State) {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
@@ -254,6 +261,8 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event string) {
 		invitedParticipants = append(invitedParticipants, r.InvitedParticipants...)
 	}()
 
+	logger.Tf(ctx, "Count participants: %d, peerId: %d", len(participants), peer.UserID)
+
 	for _, participant := range participants {
 		response := NotifyResponse{
 			NotifyMessage{
@@ -266,6 +275,8 @@ func (r *Room) Notify(ctx context.Context, peer *Participant, event string) {
 				StartedAt:           r.StartedAt,
 			},
 		}
+
+		logger.Tf(ctx, "Notify: %v", response)
 
 		message, err := json.Marshal(response)
 		if err != nil {
@@ -290,23 +301,23 @@ func (r *Room) NotifySpeak(ctx context.Context, userID int64, level float64, eve
 		invitedParticipants = append(invitedParticipants, r.InvitedParticipants...)
 	}()
 
+	response := NotifySpeakResponse{
+		NotifySpeakMessage{
+			Action: "notify",
+			Event:  event,
+			UserID: userID,
+			Level:  level,
+		},
+	}
+
+	message, err := json.Marshal(response)
+	if err != nil {
+		return
+	}
+
 	for _, participant := range participants {
 		if participant.UserID == userID {
 			continue
-		}
-
-		response := NotifySpeakResponse{
-			NotifySpeakMessage{
-				Action: "notify",
-				Event:  event,
-				UserID: userID,
-				Level:  level,
-			},
-		}
-
-		message, err := json.Marshal(response)
-		if err != nil {
-			return
 		}
 
 		select {

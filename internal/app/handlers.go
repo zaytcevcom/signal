@@ -207,6 +207,7 @@ func handleJoin(
 		IsSpeakerOn:  obj.Message.IsSpeakerOn,
 		CameraType:   obj.Message.CameraType,
 		BatteryLife:  obj.Message.BatteryLife,
+		IsReady:      false,
 	}
 	if err := r.(*internalrooms.Room).Add(p); err != nil {
 		return nil, errors.Wrapf(err, "join")
@@ -266,6 +267,8 @@ func handleStreamPublish(
 	m []byte,
 	_ Action,
 ) (interface{}, error) {
+	logger.Tf(ctx, "Publish stream start")
+
 	obj := EventStreamPublish{}
 	if err := json.Unmarshal(m, &obj); err != nil {
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
@@ -280,6 +283,8 @@ func handleStreamPublish(
 	if err != nil {
 		return nil, errors.Wrapf(err, "streamPublish")
 	}
+
+	logger.Tf(ctx, "Publish stream peer: %v", p)
 
 	data := Stream{
 		StreamURL: getWebrtcURL(a.mediaServerHost, r.(*internalrooms.Room).Name, p.UserID),
@@ -306,6 +311,8 @@ func handleStreamPlay(
 	m []byte,
 	_ Action,
 ) (interface{}, error) {
+	logger.Tf(ctx, "Play stream start")
+
 	obj := EventStreamPlay{}
 	if err := json.Unmarshal(m, &obj); err != nil {
 		return nil, errors.Wrapf(err, "Unmarshal %s", m)
@@ -316,10 +323,12 @@ func handleStreamPlay(
 		return nil, nil
 	}
 
-	_, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "streamPlay")
 	}
+
+	logger.Tf(ctx, "Play stream peer: %v", p)
 
 	data := Stream{
 		StreamURL: getWebrtcURL(a.mediaServerHost, r.(*internalrooms.Room).Name, obj.Message.ParticipantID),
@@ -338,6 +347,34 @@ func handleStreamPlay(
 	}
 
 	return &response, nil
+}
+
+func handleReady(
+	ctx context.Context,
+	a *App,
+	m []byte,
+	action Action,
+) (interface{}, error) {
+	obj := EventReady{}
+	if err := json.Unmarshal(m, &obj); err != nil {
+		return nil, errors.Wrapf(err, "Unmarshal %s", m)
+	}
+
+	r, loaded := a.rooms.Load(obj.Message.Room)
+	if !loaded {
+		return nil, nil
+	}
+
+	p, err := r.(*internalrooms.Room).Get(obj.Message.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "ready")
+	}
+
+	r.(*internalrooms.Room).Ready(p)
+
+	go r.(*internalrooms.Room).Notify(ctx, p, action.Message.Action)
+
+	return nil, nil
 }
 
 func handleChangeState(
